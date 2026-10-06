@@ -1,6 +1,7 @@
 // SlideLite viewer controller.
 import * as host from './host.js';
 import * as slides from './slides.js';
+import { Thumbnails } from './thumbnails.js';
 
 const $ = (sel) => document.querySelector(sel);
 const app = $('#app');
@@ -12,6 +13,8 @@ const state = {
 function setState(name) {
   app.dataset.state = name;
 }
+
+const thumbs = new Thumbnails($('#thumbs'), { onSelect: (i) => showSlide(i) });
 
 // ---- theme ---------------------------------------------------------------
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -71,6 +74,7 @@ host.on('document', async (info) => {
   slides.setDocument(info.base);
   document.title = `${info.title} — SlideLite`;
   setState('viewer');
+  thumbs.load(info);
   await showSlide(0);
 });
 
@@ -93,6 +97,10 @@ $('#error-close').addEventListener('click', () => {
 
 async function showSlide(index) {
   const info = state.doc;
+  if (!info) return;
+  index = Math.max(0, Math.min(info.slideCount - 1, index));
+  state.current = index;
+  thumbs.setCurrent(index);
   const hostEl = $('#slide-host');
   await slides.mountSlide(hostEl, index);
   hostEl.style.width = `${info.width}px`;
@@ -123,7 +131,8 @@ const shortcuts = $('#shortcuts-dialog');
 $('#shortcuts-close').addEventListener('click', () => shortcuts.close());
 host.on('show-shortcuts', () => { if (!shortcuts.open) shortcuts.showModal(); });
 
-window.SlideLiteDebug = { showSlide: (n) => showSlide(n) };
+// Introspection hook used by the GUI test-suite and tools/screenshot.py.
+window.SlideLite = { state, showSlide: (n) => showSlide(n), thumbs };
 
 applyTheme();
 host.send('ready');

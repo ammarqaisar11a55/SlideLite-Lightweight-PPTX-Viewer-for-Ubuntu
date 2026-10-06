@@ -60,8 +60,24 @@ def widescreen(prs: Presentation) -> Presentation:
 
 def save(prs: Presentation, name: str) -> Path:
     path = OUT / name
-    prs.save(path)
+    buffer = io.BytesIO()
+    prs.save(buffer)
+    path.write_bytes(deterministic(buffer.getvalue()))
     return path
+
+
+def deterministic(data: bytes) -> bytes:
+    """Re-zip with fixed timestamps so regenerated fixtures are byte-identical."""
+    out = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(data)) as zin,
+        zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zout,
+    ):
+        for info in zin.infolist():
+            fixed = zipfile.ZipInfo(info.filename, date_time=(2026, 1, 1, 0, 0, 0))
+            fixed.compress_type = zipfile.ZIP_DEFLATED
+            zout.writestr(fixed, zin.read(info))
+    return out.getvalue()
 
 
 # -- basic ----------------------------------------------------------------------
@@ -372,7 +388,7 @@ def rewrite(src: Path, dst: str, edit) -> None:
             data = edit(info.filename, zin.read(info))
             if data is not None:
                 zout.writestr(info.filename, data)
-    (OUT / dst).write_bytes(out.getvalue())
+    (OUT / dst).write_bytes(deterministic(out.getvalue()))
 
 
 def broken() -> None:
@@ -414,7 +430,7 @@ def broken() -> None:
         for info in zin.infolist():
             zout.writestr(info.filename, zin.read(info))
         zout.writestr("ppt/media/bomb.bin", b"\0" * (48 * 1024 * 1024))
-    (OUT / "hostile-zipbomb.pptx").write_bytes(bomb.getvalue())
+    (OUT / "hostile-zipbomb.pptx").write_bytes(deterministic(bomb.getvalue()))
 
     # Compound-file containers: an encrypted OOXML package and a legacy .ppt.
     def ole(stream_name: str) -> bytes:
@@ -438,6 +454,7 @@ def main() -> None:
     shapes()
     tables()
     multi_slide()
+    multi_slide(150, "stress-150-slides.pptx")
     aspect_ratios()
     text_formatting()
     fills()

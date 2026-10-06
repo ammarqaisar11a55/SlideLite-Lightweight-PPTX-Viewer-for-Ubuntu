@@ -17,8 +17,11 @@ from slidelite.server.session import DocumentSession, error_payload, open_sessio
 
 
 class SlideLiteApplication(Gtk.Application):
-    def __init__(self) -> None:
-        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+    def __init__(self, application_id: str | None = APP_ID) -> None:
+        # application_id=None gives an isolated, non-D-Bus instance (tests, tools).
+        super().__init__(
+            application_id=application_id, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE
+        )
         GLib.set_application_name(APP_NAME)
         GLib.set_prgname("slidelite")
         self.debug = bool(os.environ.get("SLIDELITE_DEBUG"))
