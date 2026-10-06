@@ -296,7 +296,7 @@ class SlideLiteApplication(Gtk.Application):
                 "Open → View → Present."
             ),
             license_type=Gtk.License.MIT_X11,
-            logo_icon_name="slidelite",
+            logo_icon_name=APP_ID,
             website=REPO_URL,
             website_label="SlideLite on GitHub",
         )

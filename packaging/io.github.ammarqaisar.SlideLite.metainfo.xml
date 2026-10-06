@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ammarqaisar.SlideLite</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>SlideLite</name>
+  <summary>Lightweight, offline PowerPoint viewer</summary>
+  <developer id="io.github.ammarqaisar">
+    <name>Muhammad Ammar Qaisar</name>
+  </developer>
+  <description>
+    <p>
+      SlideLite opens PowerPoint (.pptx) presentations and presents them without an office
+      suite. It renders slides with themes, masters and layouts, text, shapes, pictures,
+      tables, charts and SmartArt, and plays slide transitions and build animations in a
+      fullscreen slide show.
+    </p>
+    <p>
+      SlideLite is a viewer only: presentations are never modified, macros never run, and it
+      works completely offline with no accounts or telemetry.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.ammarqaisar.SlideLite.desktop</launchable>
+  <url type="homepage">https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu</url>
+  <url type="bugtracker">https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/issues</url>
+  <categories>
+    <category>Office</category>
+    <category>Viewer</category>
+  </categories>
+  <provides>
+    <binary>slidelite</binary>
+    <mediatype>application/vnd.openxmlformats-officedocument.presentationml.presentation</mediatype>
+    <mediatype>application/vnd.openxmlformats-officedocument.presentationml.slideshow</mediatype>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.0" date="2026-10-07">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

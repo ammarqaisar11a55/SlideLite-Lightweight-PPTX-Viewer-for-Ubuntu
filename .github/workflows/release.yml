@@ -1,0 +1,38 @@
+name: Release
+
+# Push a tag like v1.0.0 to build the .deb and publish a GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 gir1.2-gdkpixbuf-2.0 librsvg2-common \
+            python3-venv xvfb fonts-liberation fonts-crosextra-carlito fonts-crosextra-caladea
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      - name: Check the tag matches the version
+        run: |
+          VERSION=$(python3 -c 'import slidelite; print(slidelite.__version__)')
+          test "v$VERSION" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$VERSION"; exit 1; }
+      - name: Tests
+        run: |
+          python3 -m venv --system-site-packages .venv
+          .venv/bin/pip install -r requirements-dev.txt
+          xvfb-run -a .venv/bin/python -m pytest
+      - name: Build .deb
+        run: packaging/build-deb.sh dist
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.deb
+          generate_release_notes: true

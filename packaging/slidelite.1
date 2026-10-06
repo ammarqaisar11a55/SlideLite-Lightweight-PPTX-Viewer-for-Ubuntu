@@ -1,0 +1,37 @@
+.TH SLIDELITE 1 "October 2026" "SlideLite" "User Commands"
+.SH NAME
+slidelite \- lightweight PowerPoint presentation viewer
+.SH SYNOPSIS
+.B slidelite
+[\fB\-\-fullscreen\fR | \fB\-\-presentation\fR] [\fIFILE\fR...]
+.SH DESCRIPTION
+.B slidelite
+opens PowerPoint (.pptx, .ppsx, .pptm) presentations for viewing and presenting.
+It never modifies the presentation, never runs macros and never uses the network.
+Without a file it shows the welcome screen with recent presentations.
+.SH OPTIONS
+.TP
+.B \-\-fullscreen
+Open the viewer window fullscreen.
+.TP
+.B \-\-presentation
+Start the slide show immediately.
+.TP
+.B \-\-version
+Print the version and exit.
+.TP
+.B \-h, \-\-help
+Show usage information.
+.SH KEYS
+In the slide show: Right/Down/Space/Page Down next, Left/Up/Page Up previous,
+Home/End first/last slide, number then Enter go to slide, B/W black/white screen,
+Esc end the show.
+.SH FILES
+.TP
+.I ~/.config/slidelite/settings.json
+Preferences.
+.TP
+.I ~/.local/state/slidelite/recent.json
+Recently opened presentations (local only).
+.SH SEE ALSO
+https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu

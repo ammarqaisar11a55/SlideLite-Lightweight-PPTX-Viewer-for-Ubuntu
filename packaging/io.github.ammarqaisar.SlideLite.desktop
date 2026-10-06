@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Name=SlideLite
+GenericName=Presentation Viewer
+Comment=View and present PowerPoint presentations
+Exec=slidelite %U
+TryExec=slidelite
+Icon=io.github.ammarqaisar.SlideLite
+Terminal=false
+Categories=Office;Presentation;Viewer;
+Keywords=PowerPoint;pptx;ppsx;slides;slideshow;presentation;viewer;
+MimeType=application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.openxmlformats-officedocument.presentationml.slideshow;application/vnd.ms-powerpoint.presentation.macroEnabled.12;application/vnd.ms-powerpoint.slideshow.macroEnabled.12;
+StartupNotify=true
+StartupWMClass=slidelite
+Actions=present;
+
+[Desktop Action present]
+Name=Open as Slide Show
+Exec=slidelite --presentation %f

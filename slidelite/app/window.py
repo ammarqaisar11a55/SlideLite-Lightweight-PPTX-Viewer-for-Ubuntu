@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from gi.repository import Gdk, Gio, GLib, Gtk
 
-from slidelite import APP_NAME
+from slidelite import APP_ID, APP_NAME
 from slidelite.app.webview import SlideWebView
 
 PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
@@ -14,7 +14,7 @@ class ViewerWindow(Gtk.ApplicationWindow):
     def __init__(self, application, runtime) -> None:
         super().__init__(application=application, title=APP_NAME)
         self.set_default_size(1200, 760)
-        self.set_icon_name("slidelite")
+        _set_window_icon(self)
         self.runtime = runtime
         self.path: str | None = None
         self._is_fullscreen = False
@@ -221,3 +221,18 @@ class ViewerWindow(Gtk.ApplicationWindow):
                 Gtk.show_uri_on_window(self, uri, Gdk.CURRENT_TIME)
             except GLib.Error:
                 pass
+
+
+def _set_window_icon(window: Gtk.Window) -> None:
+    """Installed icon by app id; the bundled SVG when running from source."""
+    theme = Gtk.IconTheme.get_default()
+    if theme is not None and theme.has_icon(APP_ID):
+        window.set_icon_name(APP_ID)
+        return
+    from pathlib import Path
+
+    svg = Path(__file__).resolve().parent.parent / "web" / "icons" / "slidelite.svg"
+    try:
+        window.set_icon_from_file(str(svg))
+    except GLib.Error:
+        pass
