@@ -15,6 +15,13 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 os.environ.setdefault("GDK_BACKEND", "x11")
+# Use a throwaway profile so captures never touch real settings/recent files.
+if not os.environ.get("SLIDELITE_REAL_PROFILE"):
+    import tempfile
+
+    _profile = tempfile.mkdtemp(prefix="slidelite-shot-")
+    for _var in ("XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
+        os.environ[_var] = os.path.join(_profile, _var.lower())
 # XGetImage cannot read GL-composited content.
 os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
 os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")

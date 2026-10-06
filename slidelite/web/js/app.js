@@ -4,6 +4,7 @@ import * as host from './host.js';
 import * as slides from './slides.js';
 import { Builds } from './animations.js';
 import { Presenter } from './presenter.js';
+import * as recent from './recent.js';
 import { Thumbnails } from './thumbnails.js';
 import { Viewer } from './viewer.js';
 
@@ -15,6 +16,7 @@ const state = {
   doc: null,
   current: 0,
   failed: null,
+  settings: { showThumbnails: true, zoom: 'fit', useTimings: true, loop: false },
 };
 
 function setState(name) {
@@ -115,18 +117,48 @@ zoomSelect.addEventListener('change', () => {
   const v = zoomSelect.value;
   if (v === 'fit' || v === 'width') viewer.setMode(v);
   else if (v !== 'custom') viewer.setZoom(Number(v));
+  rememberZoom();
 });
-$('#btn-zoom-in').addEventListener('click', () => viewer.zoomIn());
-$('#btn-zoom-out').addEventListener('click', () => viewer.zoomOut());
+
+let zoomTimer = 0;
+function rememberZoom() {
+  // Remember the zoom mode for the next presentation (debounced for wheel zoom).
+  clearTimeout(zoomTimer);
+  zoomTimer = setTimeout(() => {
+    const mode = typeof viewer.mode === 'number' ? Math.round(viewer.mode * 100) / 100 : viewer.mode;
+    state.settings.zoom = mode;
+    host.send('setting', { key: 'zoom', value: mode });
+  }, 400);
+}
+$('#btn-zoom-in').addEventListener('click', () => { viewer.zoomIn(); rememberZoom(); });
+$('#btn-zoom-out').addEventListener('click', () => { viewer.zoomOut(); rememberZoom(); });
+$('#stage').addEventListener('wheel', (e) => { if (e.ctrlKey) rememberZoom(); });
 
 // ---- sidebar ---------------------------------------------------------------------
-function toggleSidebar(force) {
+function toggleSidebar(force, persist = true) {
   const view = $('#viewer');
   const hide = force === undefined ? !view.classList.contains('no-sidebar') : !force;
   view.classList.toggle('no-sidebar', hide);
   $('#btn-sidebar').setAttribute('aria-pressed', String(!hide));
-  host.send('setting', { key: 'showThumbnails', value: !hide });
+  if (persist) {
+    state.settings.showThumbnails = !hide;
+    host.send('setting', { key: 'showThumbnails', value: !hide });
+  }
 }
+
+// ---- settings & recent files ------------------------------------------------------------
+host.on('settings', (settings) => {
+  state.settings = { ...state.settings, ...settings };
+  toggleSidebar(state.settings.showThumbnails !== false, false);
+});
+
+host.on('recent', (items) => {
+  recent.render($('#recent'), $('#recent-list'), items || [], {
+    onOpen: (item) => host.send('open-recent', { path: item.path }),
+    onRemove: (item) => host.send('remove-recent', { path: item.path }),
+  });
+});
+$('#recent-clear').addEventListener('click', () => host.send('clear-recent'));
 $('#btn-sidebar').addEventListener('click', () => toggleSidebar());
 
 // ---- project link ----------------------------------------------------------------------
@@ -161,9 +193,9 @@ document.addEventListener('keydown', (e) => {
   const ctrl = e.ctrlKey || e.metaKey;
   if (ctrl) {
     switch (e.key) {
-      case '+': case '=': viewer.zoomIn(); break;
-      case '-': case '_': viewer.zoomOut(); break;
-      case '0': viewer.setMode('fit'); break;
+      case '+': case '=': viewer.zoomIn(); rememberZoom(); break;
+      case '-': case '_': viewer.zoomOut(); rememberZoom(); break;
+      case '0': viewer.setMode('fit'); rememberZoom(); break;
       case 'g': case 'G': slideInput.focus(); break;
       case 'b': case 'B': toggleSidebar(); break;
       default: return;
@@ -233,6 +265,8 @@ host.on('document', async (info) => {
   document.title = `${info.title} — SlideLite`;
   $('#slide-total').textContent = `/ ${info.slideCount}`;
   setState('viewer');
+  const zoom = state.settings.zoom;
+  viewer.mode = typeof zoom === 'number' ? zoom : (zoom === 'width' ? 'width' : 'fit');
   viewer.load(info);
   thumbs.load(info);
   await goTo(0);
@@ -287,6 +321,7 @@ const presenter = new Presenter({
     $('#stage').focus({ preventScroll: true });
   },
   onLink: presenterLink,
+  options: () => state.settings,
   builds: { prepare: (el, timing, options) => new Builds(state.doc).prepare(el, timing, options) },
 });
 

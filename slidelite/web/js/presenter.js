@@ -15,7 +15,8 @@ export const NoBuilds = {
 };
 
 export class Presenter {
-  constructor({ root, stage, blank, hud, onStart, onStop, onLink, builds = NoBuilds }) {
+  constructor({ root, stage, blank, hud, onStart, onStop, onLink, options, builds = NoBuilds }) {
+    this.options = options || (() => ({}));
     this.root = root;
     this.stage = stage;
     this.blank = blank;
@@ -162,7 +163,7 @@ export class Presenter {
 
   scheduleAdvance(timing) {
     const t = timing.transition;
-    if (!t || t.advTm === undefined || this.ended) return;
+    if (!t || t.advTm === undefined || this.ended || this.options().useTimings === false) return;
     const go = () => {
       if (!this.active) return;
       if (this.slideBuilds && this.slideBuilds.hasNext()) {
@@ -187,7 +188,8 @@ export class Presenter {
       return;
     }
     if (this.position >= this.order.length - 1) {
-      this.showEnd();
+      if (this.options().loop) await this.show(0);
+      else this.showEnd();
       return;
     }
     await this.show(this.position + 1);

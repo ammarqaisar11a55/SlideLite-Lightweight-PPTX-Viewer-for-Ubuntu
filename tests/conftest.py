@@ -1,8 +1,14 @@
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
+
+# Never touch the developer's real settings, recent files or caches.
+_SANDBOX = tempfile.mkdtemp(prefix="slidelite-tests-")
+for _var in ("XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
+    os.environ[_var] = os.path.join(_SANDBOX, _var.lower())
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))

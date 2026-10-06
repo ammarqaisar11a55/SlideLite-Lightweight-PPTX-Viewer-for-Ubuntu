@@ -33,9 +33,17 @@ class ViewerWindow(Gtk.ApplicationWindow):
     # -- chrome -------------------------------------------------------------
     def _build_header(self) -> None:
         self.header = Gtk.HeaderBar(show_close_button=True, title=APP_NAME)
+        open_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        open_box.get_style_context().add_class("linked")
         open_button = Gtk.Button(label="Open", action_name="win.open")
         open_button.set_tooltip_text("Open a presentation (Ctrl+O)")
-        self.header.pack_start(open_button)
+        self.recent_menu = Gio.Menu()
+        recent_button = Gtk.MenuButton(menu_model=self.recent_menu)
+        recent_button.set_tooltip_text("Recent presentations")
+        recent_button.get_accessible().set_name("Recent presentations")
+        open_box.pack_start(open_button, False, False, 0)
+        open_box.pack_start(recent_button, False, False, 0)
+        self.header.pack_start(open_box)
 
         menu = Gio.Menu()
         theme = Gio.Menu()
@@ -43,6 +51,10 @@ class ViewerWindow(Gtk.ApplicationWindow):
         theme.append("Light", "app.theme::light")
         theme.append("Dark", "app.theme::dark")
         menu.append_section("Appearance", theme)
+        show = Gio.Menu()
+        show.append("Use Slide Timings", "app.use-timings")
+        show.append("Loop Until Esc", "app.loop")
+        menu.append_section("Slide Show", show)
         misc = Gio.Menu()
         misc.append("Keyboard Shortcuts", "win.shortcuts")
         misc.append("Source Code on GitHub", "app.source")
@@ -74,8 +86,31 @@ class ViewerWindow(Gtk.ApplicationWindow):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", callback)
             self.add_action(action)
+        open_recent = Gio.SimpleAction.new("open-recent", GLib.VariantType.new("s"))
+        open_recent.connect("activate", lambda _a, value: self.open_path(value.get_string()))
+        self.add_action(open_recent)
+        placeholder = Gio.SimpleAction.new("no-recent", None)
+        placeholder.set_enabled(False)
+        self.add_action(placeholder)
         self.lookup_action("present-start").set_enabled(False)
         self.lookup_action("present-current").set_enabled(False)
+
+    def update_recent_menu(self, listing: list[dict]) -> None:
+        self.recent_menu.remove_all()
+        items = Gio.Menu()
+        for entry in listing[:10]:
+            item = Gio.MenuItem.new(entry["name"].replace("_", "__"), None)
+            item.set_action_and_target_value("win.open-recent", GLib.Variant("s", entry["path"]))
+            items.append_item(item)
+        if listing:
+            self.recent_menu.append_section(None, items)
+            clear = Gio.Menu()
+            clear.append("Clear Recent Presentations", "app.clear-recent")
+            self.recent_menu.append_section(None, clear)
+        else:
+            empty = Gio.Menu()
+            empty.append("No recent presentations", "win.no-recent")
+            self.recent_menu.append_section(None, empty)
 
     # -- file handling ------------------------------------------------------
     def choose_file(self) -> None:

@@ -12,8 +12,10 @@ from slidelite import APP_ID, APP_NAME, REPO_URL, __version__
 from slidelite.app.webview import WebRuntime
 from slidelite.app.window import ViewerWindow
 from slidelite.cli import LaunchOptions, build_parser
+from slidelite.recent import RecentFiles
 from slidelite.server.router import Router
 from slidelite.server.session import DocumentSession, error_payload, open_session
+from slidelite.settings import Settings
 
 
 class SlideLiteApplication(Gtk.Application):
@@ -27,6 +29,10 @@ class SlideLiteApplication(Gtk.Application):
         self.debug = bool(os.environ.get("SLIDELITE_DEBUG"))
         self.router = Router()
         self.runtime: WebRuntime | None = None
+        self.settings = Settings()
+        self.recent = RecentFiles()
+        self.system_dark = False
+        self._portal = None
 
     # -- lifecycle ----------------------------------------------------------
     def do_startup(self) -> None:
@@ -34,10 +40,21 @@ class SlideLiteApplication(Gtk.Application):
         self.runtime = WebRuntime(self.router, debug=self.debug)
 
         theme = Gio.SimpleAction.new_stateful(
-            "theme", GLib.VariantType.new("s"), GLib.Variant("s", "system")
+            "theme", GLib.VariantType.new("s"), GLib.Variant("s", self.settings.get("theme"))
         )
         theme.connect("activate", self._on_theme)
         self.add_action(theme)
+        for key, name in (("useTimings", "use-timings"), ("loop", "loop")):
+            toggle = Gio.SimpleAction.new_stateful(
+                name, None, GLib.Variant("b", self.settings.get(key))
+            )
+            toggle.connect("activate", self._on_toggle, key)
+            self.add_action(toggle)
+        clear = Gio.SimpleAction.new("clear-recent", None)
+        clear.connect("activate", lambda *_: self.clear_recent())
+        self.add_action(clear)
+        self._watch_system_theme()
+        self._apply_gtk_theme()
         for name, callback in (
             ("about", self._on_about),
             ("source", lambda *_: self._open_repo()),
@@ -124,6 +141,9 @@ class SlideLiteApplication(Gtk.Application):
             session.close()
             return False
         window.attach_session(session, self.router)
+        if session.path:
+            self.recent.add(session.path)
+            self.broadcast_recent()
         payload = session.info()
         payload["present"] = present
         window.webview.send("document", payload)
@@ -143,7 +163,9 @@ class SlideLiteApplication(Gtk.Application):
         cmd = message.get("cmd")
         if self.debug:
             print("page:", message, file=sys.stderr)
-        if cmd == "open-dialog":
+        if cmd == "ready":
+            self.send_preferences(window)
+        elif cmd == "open-dialog":
             window.choose_file()
         elif cmd == "open-uri":
             gfile = Gio.File.new_for_uri(str(message.get("uri", "")))
@@ -162,15 +184,101 @@ class SlideLiteApplication(Gtk.Application):
             window.set_presenting(True)
         elif cmd == "present-stop":
             window.set_presenting(False)
+        elif cmd == "setting" and isinstance(message.get("key"), str):
+            if self.settings.set(message["key"], message.get("value")):
+                self.broadcast("settings", self.settings.as_dict(), exclude=window)
+        elif cmd == "open-recent" and isinstance(message.get("path"), str):
+            window.open_path(message["path"])
+        elif cmd == "remove-recent" and isinstance(message.get("path"), str):
+            self.recent.remove(message["path"])
+            self.broadcast_recent()
+        elif cmd == "clear-recent":
+            self.clear_recent()
         elif cmd == "open-repo":
             window.open_trusted_uri(REPO_URL)
+
+    # -- preferences ------------------------------------------------------------
+    def viewer_windows(self) -> list[ViewerWindow]:
+        return [w for w in self.get_windows() if isinstance(w, ViewerWindow)]
+
+    def broadcast(self, event: str, payload, exclude=None) -> None:
+        for window in self.viewer_windows():
+            if window is not exclude:
+                window.webview.send(event, payload)
+
+    def theme_payload(self) -> dict:
+        return {"theme": self.settings.get("theme"), "systemDark": self.system_dark}
+
+    def send_preferences(self, window: ViewerWindow) -> None:
+        window.webview.send("settings", self.settings.as_dict())
+        window.webview.send("theme", self.theme_payload())
+        window.webview.send("recent", self.recent.listing())
+        window.update_recent_menu(self.recent.listing())
+
+    def broadcast_recent(self) -> None:
+        listing = self.recent.listing()
+        for window in self.viewer_windows():
+            window.webview.send("recent", listing)
+            window.update_recent_menu(listing)
+
+    def clear_recent(self) -> None:
+        self.recent.clear()
+        self.broadcast_recent()
+
+    def _apply_gtk_theme(self) -> None:
+        theme = self.settings.get("theme")
+        dark = theme == "dark" or (theme == "system" and self.system_dark)
+        gtk_settings = Gtk.Settings.get_default()
+        if gtk_settings is not None:
+            gtk_settings.props.gtk_application_prefer_dark_theme = dark
+
+    def _watch_system_theme(self) -> None:
+        """Follow the desktop light/dark preference (XDG desktop portal)."""
+        try:
+            self._portal = Gio.DBusProxy.new_for_bus_sync(
+                Gio.BusType.SESSION,
+                Gio.DBusProxyFlags.NONE,
+                None,
+                "org.freedesktop.portal.Desktop",
+                "/org/freedesktop/portal/desktop",
+                "org.freedesktop.portal.Settings",
+                None,
+            )
+            value = self._portal.call_sync(
+                "ReadOne",
+                GLib.Variant("(ss)", ("org.freedesktop.appearance", "color-scheme")),
+                Gio.DBusCallFlags.NONE,
+                1000,
+                None,
+            ).unpack()[0]
+            self.system_dark = int(value) == 1
+            self._portal.connect("g-signal", self._on_portal_signal)
+        except (GLib.Error, TypeError, ValueError):
+            gtk_settings = Gtk.Settings.get_default()
+            name = gtk_settings.props.gtk_theme_name if gtk_settings is not None else ""
+            self.system_dark = bool(name) and name.lower().endswith("-dark")
+
+    def _on_portal_signal(self, _proxy, _sender, signal: str, params: GLib.Variant) -> None:
+        if signal != "SettingChanged":
+            return
+        namespace, key, value = params.unpack()
+        if namespace == "org.freedesktop.appearance" and key == "color-scheme":
+            self.system_dark = int(value) == 1
+            self._apply_gtk_theme()
+            self.broadcast("theme", self.theme_payload())
 
     # -- actions ------------------------------------------------------------
     def _on_theme(self, action: Gio.SimpleAction, value: GLib.Variant) -> None:
         action.set_state(value)
-        for window in self.get_windows():
-            if isinstance(window, ViewerWindow):
-                window.webview.send("theme", {"theme": value.get_string()})
+        self.settings.set("theme", value.get_string())
+        self._apply_gtk_theme()
+        self.broadcast("theme", self.theme_payload())
+
+    def _on_toggle(self, action: Gio.SimpleAction, _param, key: str) -> None:
+        state = not action.get_state().get_boolean()
+        action.set_state(GLib.Variant("b", state))
+        self.settings.set(key, state)
+        self.broadcast("settings", self.settings.as_dict())
 
     def _open_repo(self) -> None:
         window = self.get_active_window()
