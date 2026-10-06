@@ -38,8 +38,19 @@ TITLE_TYPES = {"title", "ctrTitle"}
 OTHER_STYLE_TYPES = {"dt", "ftr", "sldNum", "hdr"}
 
 
-def _prefer_choice(_branch, requires: str) -> bool:
-    return False
+_TRANSITION_EXTENSIONS = {"p14", "p15", "p159"}
+
+
+def _prefer_choice(branch, requires: str) -> bool:
+    """Use the newer markup only for slide transitions, which carry exact
+    durations and Office 2010+ effects there; everything else falls back."""
+    first = next(iter(branch), None)
+    return (
+        first is not None
+        and local(first.tag) == "transition"
+        and bool(requires)
+        and set(requires.split()) <= _TRANSITION_EXTENSIONS
+    )
 
 
 @dataclass

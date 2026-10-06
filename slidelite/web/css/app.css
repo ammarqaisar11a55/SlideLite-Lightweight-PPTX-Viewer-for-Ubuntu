@@ -236,3 +236,9 @@ a.repo-link:hover { color: var(--text); }
 .welcome-repo svg { width: 16px; height: 16px; }
 #stage:focus, #stage:focus-visible, #thumbs:focus { outline: none; }
 #thumbs:focus-visible .thumb[aria-selected="true"] .thumb-frame { box-shadow: 0 0 0 2.5px var(--accent), 0 0 0 5px var(--accent-soft); }
+#pres-blank.end {
+  display: flex; align-items: flex-start; justify-content: center; padding-top: 18vh;
+  color: #d8d8d8; font: 20px var(--font-ui); letter-spacing: .01em;
+}
+#presenter .pres-layer { background: #000; }
+#presenter .pres-layer > .slide-host { box-shadow: none; }

@@ -158,6 +158,10 @@ class SlideLiteApplication(Gtk.Application):
         elif cmd == "open-link" and isinstance(message.get("url"), str):
             # Links from slides are untrusted: the window asks before opening.
             window.confirm_external_link(message["url"])
+        elif cmd == "present-start":
+            window.set_presenting(True)
+        elif cmd == "present-stop":
+            window.set_presenting(False)
         elif cmd == "open-repo":
             window.open_trusted_uri(REPO_URL)
 

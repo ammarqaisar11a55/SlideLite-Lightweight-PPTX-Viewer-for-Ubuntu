@@ -497,6 +497,50 @@ def smartart() -> None:
     (OUT / "smartart.pptx").write_bytes(deterministic(out.getvalue()))
 
 
+def transitions() -> None:
+    """One slide per transition effect; slide 5 is hidden, slide 6 auto-advances."""
+    effects = [
+        ("<p:fade/>", 'spd="med"'),
+        ('<p:push dir="u"/>', 'spd="slow"'),
+        ('<p:wipe dir="d"/>', ""),
+        ('<p:split orient="vert" dir="out"/>', ""),
+        ('<p:cover dir="l"/>', ""),
+        ('<p:pull dir="d"/>', 'advClick="0" advTm="1500"'),
+        ('<p:randomBar dir="vert"/>', ""),
+        ("<p:circle/>", ""),
+        ("<p:dissolve/>", ""),
+    ]
+    prs = widescreen(Presentation())
+    colors = [(0x2E, 0x5E, 0xAA), (0xC0, 0x50, 0x30), (0x30, 0x90, 0x60), (0x80, 0x40, 0xA0)]
+    for i, (effect, _attrs) in enumerate(effects):
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        slide.background.fill.solid()
+        slide.background.fill.fore_color.rgb = RGBColor(*colors[i % len(colors)])
+        box = slide.shapes.add_textbox(Inches(1), Inches(3), Inches(11), Inches(1.5))
+        box.text_frame.text = f"Slide {i + 1}: {effect[3:].split()[0].rstrip('/>')}"
+        box.text_frame.paragraphs[0].runs[0].font.size = Pt(44)
+        box.text_frame.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    buf = io.BytesIO()
+    prs.save(buf)
+    out = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(buf.getvalue())) as zin,
+        zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zout,
+    ):
+        for info in zin.infolist():
+            data = zin.read(info)
+            name = info.filename
+            if name.startswith("ppt/slides/slide") and name.endswith(".xml"):
+                n = int(name[len("ppt/slides/slide") : -4])
+                effect, attrs = effects[n - 1]
+                trans = f"<p:transition {attrs}>{effect}</p:transition>".encode()
+                data = data.replace(b"</p:clrMapOvr>", b"</p:clrMapOvr>" + trans)
+                if n == 5:
+                    data = data.replace(b"<p:sld ", b'<p:sld show="0" ', 1)
+            zout.writestr(info, data)
+    (OUT / "transitions.pptx").write_bytes(deterministic(out.getvalue()))
+
+
 # -- broken / hostile ------------------------------------------------------------------
 
 
@@ -580,6 +624,7 @@ def main() -> None:
     groups()
     charts()
     smartart()
+    transitions()
     broken()
     print("fixtures written to", OUT)
 

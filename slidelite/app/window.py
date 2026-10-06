@@ -134,10 +134,13 @@ class ViewerWindow(Gtk.ApplicationWindow):
             self.fullscreen()
 
     def set_presenting(self, presenting: bool) -> None:
+        if presenting == self._presenting:
+            return
         self._presenting = presenting
         if presenting:
+            self._was_fullscreen = self._is_fullscreen
             self.fullscreen()
-        else:
+        elif not getattr(self, "_was_fullscreen", False):
             self.unfullscreen()
 
     def _on_window_state(self, _window, event) -> None:

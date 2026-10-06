@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import traceback
 from dataclasses import dataclass, field
 
 from slidelite.presentation.parts import Deck, Layout, Master
+from slidelite.presentation.timing import slide_timing
 from slidelite.presentation.xmlsafe import q
 from slidelite.render import paint
 from slidelite.render.context import RenderContext
@@ -102,8 +104,18 @@ def render_slide(
     except Exception as exc:  # pragma: no cover - render_tree already isolates shapes
         traceback.print_exc()
         deck.warn(f"slide {index + 1}: {exc}")
+    try:
+        timing = slide_timing(slide)
+    except Exception as exc:  # timing problems must never hide the slide
+        deck.warn(f"timing of slide {index + 1}: {exc}")
+        timing = {}
+    timing_attr = (
+        f' data-timing="{esc(json.dumps(timing, separators=(",", ":")))}"' if timing else ""
+    )
+    hidden = ' data-hidden="1"' if slide.hidden else ""
     html = (
-        f'<div class="slide" data-slide="{index + 1}" style="width:{px(w)};height:{px(h)}">'
+        f'<div class="slide" data-slide="{index + 1}"{hidden}{timing_attr} '
+        f'style="width:{px(w)};height:{px(h)}">'
         f"{''.join(layers)}</div>"
     )
     return RenderedSlide(html, index, list(deck.warnings), ctx.media)

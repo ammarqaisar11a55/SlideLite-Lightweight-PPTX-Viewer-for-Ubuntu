@@ -2,6 +2,7 @@
 // keyboard handling.  Open → View → Present.
 import * as host from './host.js';
 import * as slides from './slides.js';
+import { Presenter } from './presenter.js';
 import { Thumbnails } from './thumbnails.js';
 import { Viewer } from './viewer.js';
 
@@ -259,7 +260,39 @@ $('#error-close').addEventListener('click', () => {
   setState(state.doc ? 'viewer' : 'welcome');
 });
 
-// ---- slide show entry points (implemented by presenter.js) ---------------------------------
+// ---- slide show -------------------------------------------------------------------------------
+function presenterLink(target) {
+  const el = target.closest('[data-href], [data-slide-jump], [data-jump]');
+  if (!el) return false;
+  if (el.dataset.href) host.send('open-link', { url: el.dataset.href });
+  else if (el.dataset.slideJump) presenter.goToSlide(Number(el.dataset.slideJump) + 1);
+  else if (el.dataset.jump === 'nextslide') presenter.next();
+  else if (el.dataset.jump === 'previousslide') presenter.prev();
+  else if (el.dataset.jump === 'firstslide') presenter.goToSlide(1);
+  else if (el.dataset.jump === 'lastslide') presenter.goToSlide(state.doc.slideCount);
+  else if (el.dataset.jump === 'endshow') presenter.stop();
+  return true;
+}
+
+const presenter = new Presenter({
+  root: $('#presenter'),
+  stage: $('#pres-stage'),
+  blank: $('#pres-blank'),
+  hud: $('#pres-hud'),
+  onStart: () => host.send('present-start'),
+  onStop: (index) => {
+    host.send('present-stop');
+    goTo(index);
+    $('#stage').focus({ preventScroll: true });
+  },
+  onLink: presenterLink,
+});
+
+document.addEventListener('slidelite:present', (e) => {
+  if (state.doc && state.doc.slideCount) presenter.start(state.doc, e.detail.from || 0);
+});
+host.on('present-stop', () => presenter.stop());
+
 host.on('present', ({ from }) => {
   if (!state.doc) return;
   document.dispatchEvent(new CustomEvent('slidelite:present', { detail: { from: from === 'current' ? state.current : 0 } }));
@@ -281,7 +314,8 @@ window.SlideLite = {
   goTo,
   showSlide: (n) => goTo(n),
   toast,
-  presenting: () => false,
+  presenter,
+  presenting: () => presenter.active,
 };
 
 applyTheme();
