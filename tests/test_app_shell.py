@@ -6,34 +6,16 @@ pytestmark = pytest.mark.gui
 
 
 def test_window_loads_ui():
-    from gi.repository import Gio, GLib
-
-    import slidelite.app  # noqa: F401  (pins GTK 3 / WebKit2 4.1)
-    from slidelite.app.application import SlideLiteApplication
     from slidelite.app.window import ViewerWindow
+    from tests.harness import Harness
 
-    app = SlideLiteApplication()
-    app.set_flags(
-        app.get_flags() | Gio.ApplicationFlags.NON_UNIQUE
-    )  # NON_UNIQUE so tests never talk to a running instance
-    seen = []
-
-    def on_cmdline(application, _cmd):
-        application.launch(__import__("slidelite.cli").cli.LaunchOptions())
-        window = application.get_windows()[0]
-        assert isinstance(window, ViewerWindow)
-        original = application.handle_page_message
-
-        def spy(win, message):
-            seen.append(message)
-            original(win, message)
-            if message.get("cmd") == "ready":
-                application.quit()
-
-        application.handle_page_message = spy
-        GLib.timeout_add_seconds(20, application.quit)
-        return 0
-
-    app.connect("command-line", on_cmdline)
-    app.run(["slidelite"])
-    assert {"cmd": "ready"} in seen
+    # The harness shares one registered Gtk.Application per test process:
+    # creating and running a second one in the same process is unsupported.
+    h = Harness()
+    try:
+        assert isinstance(h.window, ViewerWindow)
+        assert {"cmd": "ready"} in h.messages
+        assert h.js("return document.querySelector('#app').dataset.state") == "welcome"
+        assert h.window.lookup_action("present-start").get_enabled() is False
+    finally:
+        h.close()
