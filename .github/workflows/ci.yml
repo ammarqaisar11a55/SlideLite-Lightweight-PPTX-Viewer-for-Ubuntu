@@ -9,13 +9,15 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: System packages
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
             python3-venv xvfb fonts-liberation fonts-crosextra-carlito fonts-crosextra-caladea
+      - name: Allow the WebKit sandbox (bubblewrap needs user namespaces)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - name: Dev tools
         run: |
           python3 -m venv --system-site-packages .venv
@@ -30,7 +32,7 @@ jobs:
         run: if ls tests/js/*.test.mjs >/dev/null 2>&1; then node --test tests/js/; fi
       - name: Build .deb
         run: if [ -x packaging/build-deb.sh ]; then packaging/build-deb.sh; fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: slidelite-deb
           path: "*.deb"
