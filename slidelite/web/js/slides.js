@@ -29,9 +29,14 @@ export function fetchSlide(index) {
   return cache.get(key);
 }
 
-export async function mountSlide(hostEl, index) {
-  const html = await fetchSlide(index);
+export async function mountSlide(hostEl, index, { thumbnail = false } = {}) {
+  let html = await fetchSlide(index);
   mountCounter += 1;
-  hostEl.innerHTML = html.split('@@').join(`m${mountCounter}-`);
+  html = html.split('@@').join(`m${mountCounter}-`);
+  if (thumbnail) {
+    // Thumbnails use downscaled copies of large raster images.
+    html = html.split('/part/ppt/media/').join('/thumb/ppt/media/');
+  }
+  hostEl.innerHTML = html;
   return hostEl.firstElementChild;
 }

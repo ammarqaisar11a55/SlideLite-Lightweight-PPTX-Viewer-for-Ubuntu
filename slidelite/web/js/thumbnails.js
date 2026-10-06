@@ -97,9 +97,7 @@ export class Thumbnails {
     if (!item || item.dataset.mounted) return;
     item.dataset.mounted = '1';
     const host = item.querySelector('.slide-host');
-    await mountSlide(host, index);
-    // Thumbnails are static: media must never play here.
-    host.querySelectorAll('video, audio').forEach((m) => { m.removeAttribute('autoplay'); m.preload = 'none'; });
+    await mountSlide(host, index, { thumbnail: true });
   }
 
   evict() {

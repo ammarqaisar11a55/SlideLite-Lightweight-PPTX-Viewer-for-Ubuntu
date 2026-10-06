@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import parse_qsl, urlsplit
 
@@ -56,6 +57,8 @@ class WebRuntime:
         security.register_uri_scheme_as_secure(SCHEME)
         security.register_uri_scheme_as_cors_enabled(SCHEME)
         self.context.register_uri_scheme(SCHEME, self._on_scheme_request)
+        self._pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="slidelite-render")
+        self._pending: set = set()
         self._filter: WebKit2.UserContentFilter | None = None
         self._filter_waiters: list[WebKit2.UserContentManager] = []
         self._load_filter()
@@ -94,7 +97,24 @@ class WebRuntime:
             self._finish(request, Response.not_found(parts.netloc))
             return
         query = dict(parse_qsl(parts.query))
-        self._finish(request, self.router.handle(parts.path, query))
+        if not parts.path.startswith("/doc/"):
+            # Bundled UI assets are cached in memory: answer immediately.
+            self._finish(request, self.router.handle(parts.path, query))
+            return
+        # Rendering and conversions run on a worker thread so the GTK main
+        # loop stays responsive; WebKit requests must finish on the main loop.
+        self._pending.add(request)
+        future = self._pool.submit(self.router.handle, parts.path, query)
+        future.add_done_callback(lambda f: GLib.idle_add(self._finish_future, request, f))
+
+    def _finish_future(self, request: WebKit2.URISchemeRequest, future) -> bool:
+        self._pending.discard(request)
+        try:
+            resp = future.result()
+        except Exception as exc:  # pragma: no cover - router already contains errors
+            resp = Response.error(500, str(exc))
+        self._finish(request, resp)
+        return False
 
     @staticmethod
     def _finish(request: WebKit2.URISchemeRequest, resp: Response) -> None:

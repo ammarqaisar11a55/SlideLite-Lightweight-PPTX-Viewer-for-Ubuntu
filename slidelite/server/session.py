@@ -16,6 +16,7 @@ from collections import OrderedDict
 
 from slidelite.presentation import document, metafile
 from slidelite.presentation.parts import Deck
+from slidelite.render.images import image_size
 from slidelite.render.slide import render_slide
 from slidelite.server.router import Response, Router, guess_mime
 
@@ -30,6 +31,7 @@ class DocumentSession:
         self.cache_size = 48
         self._cache: OrderedDict[int, str] = OrderedDict()
         self._converted: dict[str, Response] = {}
+        self._thumbs: OrderedDict[str, Response] = OrderedDict()
 
     @property
     def prefix(self) -> str:
@@ -75,6 +77,8 @@ class DocumentSession:
             return self.part(sub[len("part/") :])
         if sub.startswith("image/"):
             return self.converted_image(sub[len("image/") :])
+        if sub.startswith("thumb/"):
+            return self.thumbnail_image(sub[len("thumb/") :])
         return Response.not_found(sub)
 
     def render_slide(self, index: int) -> str:
@@ -138,6 +142,35 @@ class DocumentSession:
         self._converted[partname] = resp
         return resp
 
+    def thumbnail_image(self, partname: str) -> Response:
+        """Raster media scaled down for thumbnails (bounded memory for large
+        photos); falls back to the original when scaling is unavailable."""
+        partname = "/" + partname.lstrip("/")
+        cached = self._thumbs.get(partname)
+        if cached is not None:
+            self._thumbs.move_to_end(partname)
+            return cached
+        original = self.part(partname)
+        if original.status != 200 or not original.mime.startswith(
+            ("image/png", "image/jpeg", "image/gif", "image/bmp", "image/webp")
+        ):
+            return original
+        size = image_size(original.body)
+        # Decide on pixel dimensions: decoded size, not file size, costs memory.
+        if size is not None and max(size[0], size[1]) <= THUMB_MAX_PX * 1.5:
+            resp = original
+        else:
+            scaled = _pixbuf_scaled(original.body, THUMB_MAX_PX)
+            resp = (
+                Response(scaled[0], scaled[1], headers={"Cache-Control": "max-age=3600"})
+                if scaled
+                else original
+            )
+        self._thumbs[partname] = resp
+        while len(self._thumbs) > 64:
+            self._thumbs.popitem(last=False)
+        return resp
+
     def close(self) -> None:
         self.presentation.close()
 
@@ -189,6 +222,8 @@ def error_payload(exc: Exception, path: str) -> dict:
     }
 
 
+THUMB_MAX_PX = 480
+
 _UNSUPPORTED_SVG = (
     b'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120">'
     b'<rect width="200" height="120" fill="#eeeeee"/><path d="M70 80l25-30 20 22 12-12 23 20z" fill="#c4c4c4"/>'
@@ -213,4 +248,36 @@ def _pixbuf_png(data: bytes) -> bytes | None:
         ok, buffer = pixbuf.save_to_bufferv("png", [], [])
         return bytes(buffer) if ok else None
     except (ImportError, ValueError, Exception):  # noqa: BLE001 - any decoder failure means "unsupported"
+        return None
+
+
+def _pixbuf_scaled(data: bytes, max_px: int) -> tuple[bytes, str] | None:
+    """Downscale an image so its longest side is at most ``max_px``."""
+    try:
+        import gi
+
+        gi.require_version("GdkPixbuf", "2.0")
+        from gi.repository import GdkPixbuf
+
+        loader = GdkPixbuf.PixbufLoader()
+        loader.write(data)
+        loader.close()
+        pixbuf = loader.get_pixbuf()
+        if pixbuf is None:
+            return None
+        w, h = pixbuf.get_width(), pixbuf.get_height()
+        scale = max_px / max(w, h)
+        if scale >= 1:
+            return None
+        small = pixbuf.scale_simple(
+            max(1, int(w * scale)), max(1, int(h * scale)), GdkPixbuf.InterpType.BILINEAR
+        )
+        if small.get_has_alpha():
+            ok, buffer = small.save_to_bufferv("png", ["compression"], ["3"])
+            mime = "image/png"
+        else:
+            ok, buffer = small.save_to_bufferv("jpeg", ["quality"], ["85"])
+            mime = "image/jpeg"
+        return (bytes(buffer), mime) if ok else None
+    except Exception:  # noqa: BLE001 - thumbnails fall back to the original
         return None
