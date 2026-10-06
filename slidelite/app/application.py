@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 
-from gi.repository import Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Gio, GLib, Gtk
 
-from slidelite import APP_ID, APP_NAME, __version__  # noqa: E402
-from slidelite.app import gi_versions  # noqa: F401
-from slidelite.app.webview import WebRuntime  # noqa: E402
-from slidelite.app.window import ViewerWindow  # noqa: E402
-from slidelite.cli import LaunchOptions, build_parser  # noqa: E402
-from slidelite.server.router import Router  # noqa: E402
+from slidelite import APP_ID, APP_NAME, __version__
+from slidelite.app.webview import WebRuntime
+from slidelite.app.window import ViewerWindow
+from slidelite.cli import LaunchOptions, build_parser
+from slidelite.server.router import Router
+from slidelite.server.session import DocumentSession, error_payload, open_session
 
 
 class SlideLiteApplication(Gtk.Application):
@@ -89,10 +90,47 @@ class SlideLiteApplication(Gtk.Application):
 
     # -- documents ----------------------------------------------------------
     def open_in_window(
-        self, window: ViewerWindow, path: str, start_presentation: bool = False
+        self,
+        window: ViewerWindow,
+        path: str,
+        start_presentation: bool = False,
+        lenient: bool = False,
     ) -> None:
-        # Module 2 replaces this with the real loader.
+        """Load ``path`` off the main thread, then hand it to ``window``."""
         window.webview.send("open-requested", {"path": path, "present": start_presentation})
+        window.loading_token = token = object()
+
+        def work() -> None:
+            try:
+                session = open_session(path, lenient=lenient)
+            except Exception as exc:  # every failure becomes a friendly error page
+                GLib.idle_add(self._load_failed, window, token, path, exc)
+                return
+            GLib.idle_add(self._load_done, window, token, session, start_presentation)
+
+        threading.Thread(target=work, name="slidelite-load", daemon=True).start()
+
+    def _load_done(
+        self, window: ViewerWindow, token, session: DocumentSession, present: bool
+    ) -> bool:
+        if window.loading_token is not token or window.get_window() is None:
+            session.close()
+            return False
+        window.attach_session(session, self.router)
+        payload = session.info()
+        payload["present"] = present
+        window.webview.send("document", payload)
+        return False
+
+    def _load_failed(self, window: ViewerWindow, token, path: str, exc: Exception) -> bool:
+        if window.loading_token is not token:
+            return False
+        if self.debug:
+            import traceback
+
+            traceback.print_exception(exc)
+        window.webview.send("load-error", error_payload(exc, path))
+        return False
 
     def handle_page_message(self, window: ViewerWindow, message: dict) -> None:
         cmd = message.get("cmd")
@@ -106,6 +144,10 @@ class SlideLiteApplication(Gtk.Application):
                 window.open_path(gfile.get_path())
         elif cmd == "toggle-fullscreen":
             window.toggle_fullscreen()
+        elif cmd == "open-anyway" and message.get("path"):
+            self.open_in_window(window, str(message["path"]), lenient=True)
+        elif cmd == "close-document":
+            window.detach_session(self.router)
 
     # -- actions ------------------------------------------------------------
     def _on_theme(self, action: Gio.SimpleAction, value: GLib.Variant) -> None:

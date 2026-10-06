@@ -20,10 +20,9 @@ from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import parse_qsl, urlsplit
 
-from gi.repository import Gio, GLib, WebKit2  # noqa: E402
+from gi.repository import Gio, GLib, WebKit2
 
-from slidelite.app import gi_versions  # noqa: F401
-from slidelite.server.router import Response, Router  # noqa: E402
+from slidelite.server.router import Response, Router
 
 SCHEME = "slidelite"
 APP_URL = f"{SCHEME}://app/index.html"
@@ -157,11 +156,16 @@ class SlideWebView(WebKit2.WebView):
         self.evaluate_javascript(script, -1, None, None, None, None, None)
 
     def _load_changed(self, _view, event) -> None:
-        if event == WebKit2.LoadEvent.FINISHED:
-            self._ready = True
-            pending, self._pending = self._pending, []
-            for script in pending:
-                self.evaluate_javascript(script, -1, None, None, None, None, None)
+        # LOAD_FINISHED can fire before ES modules have executed, so the page
+        # announces readiness itself with a {"cmd": "ready"} message.
+        if event == WebKit2.LoadEvent.STARTED:
+            self._ready = False
+
+    def _flush(self) -> None:
+        self._ready = True
+        pending, self._pending = self._pending, []
+        for script in pending:
+            self.evaluate_javascript(script, -1, None, None, None, None, None)
 
     # -- page -> host -------------------------------------------------------
     def _script_message(self, _manager, value) -> None:
@@ -170,8 +174,11 @@ class SlideWebView(WebKit2.WebView):
             message = json.loads(js.to_string())
         except (ValueError, AttributeError):
             return
-        if isinstance(message, dict):
-            self._on_message(message)
+        if not isinstance(message, dict):
+            return
+        if message.get("cmd") == "ready":
+            self._flush()
+        self._on_message(message)
 
     def _decide_policy(self, _view, decision, kind) -> bool:
         if kind in (

@@ -63,6 +63,60 @@ host.on('open-requested', ({ path }) => {
   $('#loading-text').textContent = `Opening ${path.split('/').pop()}…`;
 });
 
+// ---- document lifecycle ------------------------------------------------------
+host.on('document', async (info) => {
+  state.doc = info;
+  state.current = 0;
+  document.title = `${info.title} — SlideLite`;
+  setState('viewer');
+  await showSlide(0);
+});
+
+host.on('load-error', (err) => {
+  state.failed = err;
+  $('#error-title').textContent = err.title || 'Unable to open this presentation';
+  $('#error-text').textContent = [err.message, err.detail].filter(Boolean).join('\n\n');
+  $('#error-anyway').hidden = !err.recoverable;
+  setState('error');
+  (err.recoverable ? $('#error-anyway') : $('#error-close')).focus();
+});
+
+$('#error-anyway').addEventListener('click', () => {
+  if (state.failed) host.send('open-anyway', { path: state.failed.path });
+});
+$('#error-close').addEventListener('click', () => {
+  state.failed = null;
+  setState(state.doc ? 'viewer' : 'welcome');
+});
+
+async function showSlide(index) {
+  const info = state.doc;
+  const res = await fetch(`${info.base}slide/${index + 1}.html`);
+  const hostEl = $('#slide-host');
+  hostEl.innerHTML = res.ok ? await res.text() : '';
+  hostEl.style.width = `${info.width}px`;
+  hostEl.style.height = `${info.height}px`;
+  $('#slide-input').value = String(index + 1);
+  $('#slide-total').textContent = `/ ${info.slideCount}`;
+  fit();
+}
+
+function fit() {
+  const info = state.doc;
+  if (!info) return;
+  const stage = $('#stage');
+  const pad = 32;
+  const scale = Math.max(0.05, Math.min((stage.clientWidth - pad * 2) / info.width, (stage.clientHeight - pad * 2) / info.height));
+  const canvas = $('#stage-canvas');
+  canvas.style.width = `${info.width * scale + pad * 2}px`;
+  canvas.style.height = `${info.height * scale + pad * 2}px`;
+  const hostEl = $('#slide-host');
+  hostEl.style.left = `${pad}px`;
+  hostEl.style.top = `${pad}px`;
+  hostEl.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', fit);
+
 // ---- shortcuts dialog --------------------------------------------------------
 const shortcuts = $('#shortcuts-dialog');
 $('#shortcuts-close').addEventListener('click', () => shortcuts.close());

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Gdk, Gio, GLib, Gtk
 
-from slidelite import APP_NAME  # noqa: E402
-from slidelite.app import gi_versions  # noqa: F401
-from slidelite.app.webview import SlideWebView  # noqa: E402
+from slidelite import APP_NAME
+from slidelite.app.webview import SlideWebView
 
 PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 
@@ -20,12 +19,15 @@ class ViewerWindow(Gtk.ApplicationWindow):
         self.path: str | None = None
         self._is_fullscreen = False
         self._presenting = False
+        self.session = None
+        self.loading_token = None
 
         self._build_header()
         self.webview = SlideWebView(runtime, self._on_page_message, self._on_external_link)
         self.add(self.webview)
         self._install_actions()
         self.connect("window-state-event", self._on_window_state)
+        self.connect("destroy", lambda *_: self.detach_session(application.router, update_ui=False))
         self.webview.show()
 
     # -- chrome -------------------------------------------------------------
@@ -97,6 +99,21 @@ class ViewerWindow(Gtk.ApplicationWindow):
 
     def open_path(self, path: str, start_presentation: bool = False) -> None:
         self.get_application().open_in_window(self, path, start_presentation)
+
+    def attach_session(self, session, router) -> None:
+        self.detach_session(router)
+        self.session = session
+        session.mount(router)
+        info = session.info()
+        self.set_document(session.path, info["title"], info["slideCount"])
+
+    def detach_session(self, router, update_ui: bool = True) -> None:
+        if self.session is not None:
+            self.session.unmount(router)
+            self.session.close()
+            self.session = None
+            if update_ui:
+                self.set_document(None, None, 0)
 
     def set_document(self, path: str | None, title: str | None, slide_count: int) -> None:
         self.path = path

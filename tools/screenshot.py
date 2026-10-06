@@ -19,11 +19,10 @@ os.environ.setdefault("GDK_BACKEND", "x11")
 os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
 os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
 
-from gi.repository import Gdk, GLib  # noqa: E402
-
-from slidelite.app import gi_versions  # noqa: E402,F401
-from slidelite.app.application import SlideLiteApplication  # noqa: E402
+from slidelite.app.application import SlideLiteApplication  # noqa: E402  (pins gi versions)
 from slidelite.cli import LaunchOptions  # noqa: E402
+
+from gi.repository import Gdk, GLib  # noqa: E402  isort: skip
 
 
 def main() -> int:

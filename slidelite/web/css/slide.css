@@ -1,0 +1,13 @@
+/* Slide content.  Everything inside .slide-host comes from the presentation;
+   nothing here depends on the application theme. */
+.slide-host {
+  overflow: hidden;
+  background: #fff;
+  color: #000;
+  color-scheme: light;
+  font-family: Carlito, Calibri, "Liberation Sans", Arial, sans-serif;
+  line-height: normal;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.slide { position: relative; width: 100%; height: 100%; overflow: hidden; }

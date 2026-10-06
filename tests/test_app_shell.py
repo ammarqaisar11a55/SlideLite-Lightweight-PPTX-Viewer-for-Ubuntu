@@ -8,7 +8,7 @@ pytestmark = pytest.mark.gui
 def test_window_loads_ui():
     from gi.repository import GLib
 
-    from slidelite.app import gi_versions  # noqa: F401
+    import slidelite.app  # noqa: F401  (pins GTK 3 / WebKit2 4.1)
     from slidelite.app.application import SlideLiteApplication
     from slidelite.app.window import ViewerWindow
 
