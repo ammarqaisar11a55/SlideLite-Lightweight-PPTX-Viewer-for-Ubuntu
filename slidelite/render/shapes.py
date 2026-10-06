@@ -170,7 +170,9 @@ class ShapeRenderer:
             return ""
         attrs = ""
         spid = c_nv_pr.get("id")
-        if spid:
+        # Shape ids repeat across slide/layout/master parts; only the slide's
+        # own shapes are animation targets.
+        if spid and ctx.part is ctx.slide:
             attrs += f' data-spid="{esc(spid)}"'
         hlink = c_nv_pr.find(q("a:hlinkClick"))
         if hlink is not None:

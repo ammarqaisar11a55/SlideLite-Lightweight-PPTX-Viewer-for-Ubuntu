@@ -2,6 +2,7 @@
 // keyboard handling.  Open → View → Present.
 import * as host from './host.js';
 import * as slides from './slides.js';
+import { Builds } from './animations.js';
 import { Presenter } from './presenter.js';
 import { Thumbnails } from './thumbnails.js';
 import { Viewer } from './viewer.js';
@@ -286,6 +287,7 @@ const presenter = new Presenter({
     $('#stage').focus({ preventScroll: true });
   },
   onLink: presenterLink,
+  builds: { prepare: (el, timing, options) => new Builds(state.doc).prepare(el, timing, options) },
 });
 
 document.addEventListener('slidelite:present', (e) => {

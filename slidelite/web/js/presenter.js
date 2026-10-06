@@ -176,11 +176,14 @@ export class Presenter {
 
   async next() {
     if (!this.active) return;
+    if (this.slideBuilds && this.slideBuilds.running && this.slideBuilds.running.length) {
+      this.slideBuilds.step(); // completes the running animation immediately
+      return;
+    }
     if (this.busy) return;
     if (this.ended) { this.stop(); return; }
     if (this.slideBuilds && this.slideBuilds.hasNext()) {
-      this.busy = true;
-      try { await this.slideBuilds.step(); } finally { this.busy = false; }
+      this.slideBuilds.step();
       return;
     }
     if (this.position >= this.order.length - 1) {

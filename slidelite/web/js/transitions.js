@@ -23,7 +23,7 @@ function animate(el, keyframes, duration, easing = 'ease-in-out') {
   return anim.finished.catch(() => {});
 }
 
-function stepped(el, duration, frame) {
+export function stepped(el, duration, frame) {
   // frame(t) returns a clip-path for progress t in [0, 1].
   return new Promise((resolve) => {
     const start = performance.now();
@@ -38,7 +38,7 @@ function stepped(el, duration, frame) {
   });
 }
 
-function rectsPath(rects, w, h) {
+export function rectsPath(rects, w, h) {
   // rects in 0..1 units -> SVG path clip in px
   if (!rects.length) return 'path("M0 0Z")';
   return `path("${rects.map(([x, y, rw, rh]) => {
@@ -47,7 +47,7 @@ function rectsPath(rects, w, h) {
   }).join('')}")`;
 }
 
-function seededOrder(n, seed = 7) {
+export function seededOrder(n, seed = 7) {
   const order = [...Array(n).keys()];
   let s = seed;
   for (let i = n - 1; i > 0; i -= 1) {
@@ -187,7 +187,7 @@ const effects = {
   wheel: (o, n, s) => stepped(n, s.dur, (t) => wedgePath(n, t, Number(s.spokes) || 4)),
 };
 
-function wedgePath(el, t, spokes) {
+export function wedgePath(el, t, spokes) {
   const w = el.clientWidth; const h = el.clientHeight;
   const cx = w / 2; const cy = h / 2; const r = Math.hypot(w, h);
   let d = '';

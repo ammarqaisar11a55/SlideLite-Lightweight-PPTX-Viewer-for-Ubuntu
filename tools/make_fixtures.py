@@ -541,6 +541,159 @@ def transitions() -> None:
     (OUT / "transitions.pptx").write_bytes(deterministic(out.getvalue()))
 
 
+def _effect_xml(ids, spid, cls, preset, sub, node_type, delay, behaviours, para=None):
+    tgt = (
+        f'<p:spTgt spid="{spid}"/>'
+        if para is None
+        else (
+            f'<p:spTgt spid="{spid}"><p:txEl><p:pRg st="{para}" end="{para}"/></p:txEl></p:spTgt>'
+        )
+    )
+    inner = "".join(b.replace("TGT", tgt).replace("ID", str(next(ids))) for b in behaviours)
+    return (
+        f'<p:par><p:cTn id="{next(ids)}" presetID="{preset}" presetClass="{cls}" presetSubtype="{sub}" '
+        f'fill="hold" nodeType="{node_type}"><p:stCondLst><p:cond delay="{delay}"/></p:stCondLst>'
+        f"<p:childTnLst>{inner}</p:childTnLst></p:cTn></p:par>"
+    )
+
+
+_SET_VISIBLE = (
+    '<p:set><p:cBhvr><p:cTn id="ID" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn>'
+    "<p:tgtEl>TGT</p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr>"
+    '<p:to><p:strVal val="visible"/></p:to></p:set>'
+)
+
+
+def _filter(name, transition="in", dur=500):
+    return (
+        f'<p:animEffect transition="{transition}" filter="{name}"><p:cBhvr><p:cTn id="ID" dur="{dur}"/>'
+        "<p:tgtEl>TGT</p:tgtEl></p:cBhvr></p:animEffect>"
+    )
+
+
+def animations() -> None:
+    """Builds: auto zoom, click fade, fly-in + wipe + by-paragraph appear,
+    then exit, spin emphasis and a motion path."""
+    import itertools
+
+    prs = widescreen(Presentation())
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    shapes = {}
+    for key, (x, y, label) in {
+        "zoom": (0.5, 0.5, "Zoomed in automatically"),
+        "fade": (0.5, 2.0, "Fades in on click 1"),
+        "fly": (0.5, 3.5, "Flies in from the left"),
+        "wipe": (7.0, 3.5, "Wipes down"),
+        "list": (7.0, 0.5, "First point\nSecond point"),
+    }.items():
+        box = slide.shapes.add_shape(
+            MSO_SHAPE.ROUNDED_RECTANGLE, Inches(x), Inches(y), Inches(5.5), Inches(1.2)
+        )
+        box.text_frame.text = label
+        shapes[key] = box.shape_id
+    ids = itertools.count(3)
+    scale = (
+        '<p:animScale><p:cBhvr><p:cTn id="ID" dur="500" fill="hold"/><p:tgtEl>TGT</p:tgtEl></p:cBhvr>'
+        '<p:from x="0" y="0"/><p:to x="100000" y="100000"/></p:animScale>'
+    )
+    fly = (
+        '<p:anim calcmode="lin" valueType="num"><p:cBhvr additive="base"><p:cTn id="ID" dur="500" fill="hold"/>'
+        "<p:tgtEl>TGT</p:tgtEl><p:attrNameLst><p:attrName>ppt_x</p:attrName></p:attrNameLst></p:cBhvr>"
+        '<p:tavLst><p:tav tm="0"><p:val><p:strVal val="0-#ppt_w/2"/></p:val></p:tav>'
+        '<p:tav tm="100000"><p:val><p:strVal val="#ppt_x"/></p:val></p:tav></p:tavLst></p:anim>'
+    )
+    spin = '<p:animRot by="21600000"><p:cBhvr><p:cTn id="ID" dur="1000" fill="hold"/><p:tgtEl>TGT</p:tgtEl></p:cBhvr></p:animRot>'
+    motion = (
+        '<p:animMotion origin="layout" path="M 0 0 L 0.25 0 E" pathEditMode="relative">'
+        '<p:cBhvr><p:cTn id="ID" dur="800" fill="hold"/><p:tgtEl>TGT</p:tgtEl></p:cBhvr></p:animMotion>'
+    )
+
+    def group(cond, effects_xml, offsets):
+        inner = "".join(
+            f'<p:par><p:cTn id="{next(ids)}" fill="hold"><p:stCondLst><p:cond delay="{off}"/></p:stCondLst>'
+            f"<p:childTnLst>{xml}</p:childTnLst></p:cTn></p:par>"
+            for xml, off in zip(effects_xml, offsets, strict=True)
+        )
+        return (
+            f'<p:par><p:cTn id="{next(ids)}" fill="hold"><p:stCondLst>{cond}</p:stCondLst>'
+            f"<p:childTnLst>{inner}</p:childTnLst></p:cTn></p:par>"
+        )
+
+    click = '<p:cond delay="indefinite"/>'
+    auto = '<p:cond delay="indefinite"/><p:cond evt="onBegin" delay="0"><p:tn val="2"/></p:cond>'
+    g0 = group(
+        auto,
+        [_effect_xml(ids, shapes["zoom"], "entr", 23, 16, "afterEffect", 0, [_SET_VISIBLE, scale])],
+        [0],
+    )
+    g1 = group(
+        click,
+        [
+            _effect_xml(
+                ids,
+                shapes["fade"],
+                "entr",
+                10,
+                0,
+                "clickEffect",
+                0,
+                [_SET_VISIBLE, _filter("fade")],
+            )
+        ],
+        [0],
+    )
+    g2 = group(
+        click,
+        [
+            _effect_xml(ids, shapes["fly"], "entr", 2, 8, "clickEffect", 0, [_SET_VISIBLE, fly])
+            + _effect_xml(
+                ids,
+                shapes["wipe"],
+                "entr",
+                22,
+                1,
+                "withEffect",
+                0,
+                [_SET_VISIBLE, _filter("wipe(down)")],
+            ),
+            _effect_xml(ids, shapes["list"], "entr", 1, 0, "afterEffect", 0, [_SET_VISIBLE], para=0)
+            + _effect_xml(
+                ids, shapes["list"], "entr", 1, 0, "afterEffect", 0, [_SET_VISIBLE], para=1
+            ),
+        ],
+        [0, 500],
+    )
+    g3 = group(
+        click,
+        [
+            _effect_xml(
+                ids, shapes["fade"], "exit", 10, 0, "clickEffect", 0, [_filter("fade", "out")]
+            )
+            + _effect_xml(ids, shapes["wipe"], "emph", 8, 0, "withEffect", 0, [spin])
+            + _effect_xml(ids, shapes["fly"], "path", 0, 0, "withEffect", 0, [motion]),
+        ],
+        [0],
+    )
+    timing = (
+        '<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>'
+        '<p:seq concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq"><p:childTnLst>'
+        f"{g0}{g1}{g2}{g3}</p:childTnLst></p:cTn></p:seq></p:childTnLst></p:cTn></p:par></p:tnLst></p:timing>"
+    ).encode()
+    buf = io.BytesIO()
+    prs.save(buf)
+    out = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(buf.getvalue())) as zin,
+        zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zout,
+    ):
+        for info in zin.infolist():
+            data = zin.read(info)
+            if info.filename == "ppt/slides/slide1.xml":
+                data = data.replace(b"</p:clrMapOvr>", b"</p:clrMapOvr>" + timing)
+            zout.writestr(info, data)
+    (OUT / "animations.pptx").write_bytes(deterministic(out.getvalue()))
+
+
 # -- broken / hostile ------------------------------------------------------------------
 
 
@@ -625,6 +778,7 @@ def main() -> None:
     charts()
     smartart()
     transitions()
+    animations()
     broken()
     print("fixtures written to", OUT)
 

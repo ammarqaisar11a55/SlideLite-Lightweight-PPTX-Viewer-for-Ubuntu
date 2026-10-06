@@ -416,7 +416,7 @@ class TextRenderer:
         lvl = max(0, min(8, lvl))
         return merge(self.chain.level(lvl + 1), parse_ppr(ppr_el)), lvl
 
-    def render_paragraph(self, p, slide_number: int) -> str:
+    def render_paragraph(self, p, slide_number: int, index: int = 0) -> str:
         pp, lvl = self.paragraph_props(p)
         base_rpr = pp.get("rpr", {})
         runs: list[tuple[str, dict, str | None]] = []  # (kind, rpr, text)
@@ -493,7 +493,7 @@ class TextRenderer:
             body.append(span)
         if not has_text or runs and runs[-1][0] == "br":
             body.append("<br>")
-        return f'<p style="{";".join(css)}">{bullet}{"".join(body)}</p>'
+        return f'<p data-para="{index}" style="{";".join(css)}">{bullet}{"".join(body)}</p>'
 
     def link(self, hlink, inner: str) -> str:
         action = hlink.get("action", "")
@@ -602,7 +602,9 @@ def render_paragraphs(ctx: RenderContext, tx_body, chain: StyleChain, body: dict
         except ValueError:
             ctx.spacing_reduction = 0.0
     renderer = TextRenderer(ctx, local_chain)
-    return "".join(renderer.render_paragraph(p, ctx.slide_number) for p in paragraphs)
+    return "".join(
+        renderer.render_paragraph(p, ctx.slide_number, i) for i, p in enumerate(paragraphs)
+    )
 
 
 def render_text_frame(
