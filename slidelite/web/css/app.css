@@ -164,8 +164,9 @@ body.drag-over #viewer { outline: 2px dashed var(--accent); outline-offset: 8px;
 .thumb-frame > .slide-host { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; }
 
 #stage { grid-area: stage; background: var(--stage); position: relative; overflow: hidden; min-width: 0; }
-#stage-scroll { position: absolute; inset: 0; overflow: auto; }
-#stage-canvas { position: relative; margin: 0 auto; }
+#stage-scroll { position: absolute; inset: 0; overflow: auto; display: flex; }
+/* margin:auto centres the slide while it fits and keeps it scrollable when zoomed in */
+#stage-canvas { position: relative; margin: auto; flex: none; }
 #stage-canvas > .slide-host { position: absolute; transform-origin: 0 0; box-shadow: var(--slide-shadow); }
 
 #toolbar {
@@ -226,3 +227,12 @@ dialog h2 { margin: 0 0 14px; font-size: 17px; }
 .shortcut-columns dd span { margin-left: auto; color: var(--muted); padding-left: 8px; }
 kbd { display: inline-block; min-width: 22px; padding: 1px 6px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; background: var(--bg); font: 12px/1.5 var(--font-ui); text-align: center; }
 .dialog-actions { display: flex; justify-content: flex-end; margin-top: 18px; }
+
+/* ---- project link ---------------------------------------------------- */
+a.repo-link { color: var(--muted); text-decoration: none; }
+a.repo-link:hover { color: var(--text); }
+.welcome-repo { display: inline-flex; align-items: center; gap: 6px; margin-top: 30px; font-size: 13px; padding: 4px 8px; border-radius: 6px; }
+.welcome-repo:hover { background: var(--hover); }
+.welcome-repo svg { width: 16px; height: 16px; }
+#stage:focus, #stage:focus-visible, #thumbs:focus { outline: none; }
+#thumbs:focus-visible .thumb[aria-selected="true"] .thumb-frame { box-shadow: 0 0 0 2.5px var(--accent), 0 0 0 5px var(--accent-soft); }

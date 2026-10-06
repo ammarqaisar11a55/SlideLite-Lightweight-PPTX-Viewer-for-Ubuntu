@@ -45,6 +45,7 @@ class ViewerWindow(Gtk.ApplicationWindow):
         menu.append_section("Appearance", theme)
         misc = Gio.Menu()
         misc.append("Keyboard Shortcuts", "win.shortcuts")
+        misc.append("Source Code on GitHub", "app.source")
         misc.append(f"About {APP_NAME}", "app.about")
         menu.append_section(None, misc)
         menu_button = Gtk.MenuButton(menu_model=menu)
@@ -150,6 +151,16 @@ class ViewerWindow(Gtk.ApplicationWindow):
     # -- page messages ------------------------------------------------------
     def _on_page_message(self, message: dict) -> None:
         self.get_application().handle_page_message(self, message)
+
+    def open_trusted_uri(self, uri: str) -> None:
+        try:
+            Gtk.show_uri_on_window(self, uri, Gdk.CURRENT_TIME)
+        except GLib.Error:
+            pass
+
+    def confirm_external_link(self, uri: str) -> None:
+        if uri.lower().startswith(("http://", "https://", "mailto:")):
+            self._on_external_link(uri)
 
     def _on_external_link(self, uri: str) -> None:
         dialog = Gtk.MessageDialog(

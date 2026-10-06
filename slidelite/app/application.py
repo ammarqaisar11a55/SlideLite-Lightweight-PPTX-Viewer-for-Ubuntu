@@ -8,7 +8,7 @@ import threading
 
 from gi.repository import Gio, GLib, Gtk
 
-from slidelite import APP_ID, APP_NAME, __version__
+from slidelite import APP_ID, APP_NAME, REPO_URL, __version__
 from slidelite.app.webview import WebRuntime
 from slidelite.app.window import ViewerWindow
 from slidelite.cli import LaunchOptions, build_parser
@@ -38,7 +38,11 @@ class SlideLiteApplication(Gtk.Application):
         )
         theme.connect("activate", self._on_theme)
         self.add_action(theme)
-        for name, callback in (("about", self._on_about), ("quit", lambda *_: self.quit())):
+        for name, callback in (
+            ("about", self._on_about),
+            ("source", lambda *_: self._open_repo()),
+            ("quit", lambda *_: self.quit()),
+        ):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", callback)
             self.add_action(action)
@@ -151,6 +155,11 @@ class SlideLiteApplication(Gtk.Application):
             self.open_in_window(window, str(message["path"]), lenient=True)
         elif cmd == "close-document":
             window.detach_session(self.router)
+        elif cmd == "open-link" and isinstance(message.get("url"), str):
+            # Links from slides are untrusted: the window asks before opening.
+            window.confirm_external_link(message["url"])
+        elif cmd == "open-repo":
+            window.open_trusted_uri(REPO_URL)
 
     # -- actions ------------------------------------------------------------
     def _on_theme(self, action: Gio.SimpleAction, value: GLib.Variant) -> None:
@@ -158,6 +167,11 @@ class SlideLiteApplication(Gtk.Application):
         for window in self.get_windows():
             if isinstance(window, ViewerWindow):
                 window.webview.send("theme", {"theme": value.get_string()})
+
+    def _open_repo(self) -> None:
+        window = self.get_active_window()
+        if isinstance(window, ViewerWindow):
+            window.open_trusted_uri(REPO_URL)
 
     def _on_about(self, *_args) -> None:
         dialog = Gtk.AboutDialog(
@@ -171,7 +185,8 @@ class SlideLiteApplication(Gtk.Application):
             ),
             license_type=Gtk.License.MIT_X11,
             logo_icon_name="slidelite",
-            website="https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu",
+            website=REPO_URL,
+            website_label="SlideLite on GitHub",
         )
         dialog.run()
         dialog.destroy()

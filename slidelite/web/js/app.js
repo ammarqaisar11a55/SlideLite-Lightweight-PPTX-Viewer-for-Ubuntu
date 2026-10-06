@@ -1,22 +1,35 @@
-// SlideLite viewer controller.
+// SlideLite viewer controller: document lifecycle, navigation, zoom and
+// keyboard handling.  Open → View → Present.
 import * as host from './host.js';
 import * as slides from './slides.js';
 import { Thumbnails } from './thumbnails.js';
+import { Viewer } from './viewer.js';
 
 const $ = (sel) => document.querySelector(sel);
 const app = $('#app');
 
 const state = {
   theme: 'system',
+  doc: null,
+  current: 0,
+  failed: null,
 };
 
 function setState(name) {
   app.dataset.state = name;
 }
 
-const thumbs = new Thumbnails($('#thumbs'), { onSelect: (i) => showSlide(i) });
+// ---- toast -------------------------------------------------------------------
+let toastTimer = 0;
+export function toast(message, ms = 2600) {
+  const el = $('#toast');
+  el.textContent = message;
+  el.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('visible'), ms);
+}
 
-// ---- theme ---------------------------------------------------------------
+// ---- theme -------------------------------------------------------------------
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 function applyTheme() {
   const dark = state.theme === 'dark' || (state.theme === 'system' && (state.systemDark ?? darkQuery.matches));
@@ -29,7 +42,149 @@ host.on('theme', ({ theme, systemDark }) => {
   applyTheme();
 });
 
-// ---- opening files ---------------------------------------------------------
+// ---- views ---------------------------------------------------------------------
+const zoomSelect = $('#zoom-select');
+const viewer = new Viewer({
+  stage: $('#stage'),
+  scroller: $('#stage-scroll'),
+  canvas: $('#stage-canvas'),
+  host: $('#slide-host'),
+  onZoomChange: (mode, zoom) => {
+    const custom = zoomSelect.querySelector('option[value="custom"]');
+    if (typeof mode === 'string') {
+      zoomSelect.value = mode;
+      custom.hidden = true;
+    } else {
+      const preset = [...zoomSelect.options].find((o) => Math.abs(Number(o.value) - mode) < 0.001);
+      if (preset) {
+        zoomSelect.value = preset.value;
+        custom.hidden = true;
+      } else {
+        custom.hidden = false;
+        custom.textContent = `${Math.round(zoom * 100)}%`;
+        zoomSelect.value = 'custom';
+      }
+    }
+    $('#stage').classList.toggle('zoomed', mode !== 'fit');
+  },
+});
+const thumbs = new Thumbnails($('#thumbs'), { onSelect: (i) => goTo(i, { focusThumbs: true }) });
+
+// ---- navigation -----------------------------------------------------------------
+async function goTo(index, { focusThumbs = false } = {}) {
+  const doc = state.doc;
+  if (!doc || !doc.slideCount) return;
+  index = Math.max(0, Math.min(doc.slideCount - 1, index));
+  state.current = index;
+  thumbs.setCurrent(index);
+  $('#slide-input').value = String(index + 1);
+  $('#btn-prev').disabled = index === 0;
+  $('#btn-next').disabled = index === doc.slideCount - 1;
+  if (focusThumbs) $('#thumbs').focus({ preventScroll: true });
+  await viewer.show(index);
+  if (typeof viewer.mode === 'number' || viewer.mode === 'width') $('#stage-scroll').scrollTop = 0;
+}
+
+const next = () => goTo(state.current + 1);
+const prev = () => goTo(state.current - 1);
+
+$('#btn-next').addEventListener('click', next);
+$('#btn-prev').addEventListener('click', prev);
+
+const slideInput = $('#slide-input');
+slideInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const n = parseInt(slideInput.value, 10);
+    if (Number.isFinite(n)) goTo(n - 1);
+    else slideInput.value = String(state.current + 1);
+    slideInput.select();
+    e.preventDefault();
+  } else if (e.key === 'Escape') {
+    slideInput.value = String(state.current + 1);
+    $('#stage').focus();
+  }
+  e.stopPropagation();
+});
+slideInput.addEventListener('focus', () => slideInput.select());
+slideInput.addEventListener('blur', () => { slideInput.value = String(state.current + 1); });
+
+// ---- zoom ------------------------------------------------------------------------
+zoomSelect.addEventListener('change', () => {
+  const v = zoomSelect.value;
+  if (v === 'fit' || v === 'width') viewer.setMode(v);
+  else if (v !== 'custom') viewer.setZoom(Number(v));
+});
+$('#btn-zoom-in').addEventListener('click', () => viewer.zoomIn());
+$('#btn-zoom-out').addEventListener('click', () => viewer.zoomOut());
+
+// ---- sidebar ---------------------------------------------------------------------
+function toggleSidebar(force) {
+  const view = $('#viewer');
+  const hide = force === undefined ? !view.classList.contains('no-sidebar') : !force;
+  view.classList.toggle('no-sidebar', hide);
+  $('#btn-sidebar').setAttribute('aria-pressed', String(!hide));
+  host.send('setting', { key: 'showThumbnails', value: !hide });
+}
+$('#btn-sidebar').addEventListener('click', () => toggleSidebar());
+
+// ---- project link ----------------------------------------------------------------------
+// The host only ever opens its own hard-coded repository URL for this command.
+document.querySelectorAll('.repo-link').forEach((el) => {
+  el.addEventListener('click', (e) => { e.preventDefault(); host.send('open-repo'); });
+});
+
+// ---- links inside slides ------------------------------------------------------------
+function handleSlideLink(target) {
+  const el = target.closest('[data-href], [data-slide-jump], [data-jump]');
+  if (!el) return false;
+  if (el.dataset.href) host.send('open-link', { url: el.dataset.href });
+  else if (el.dataset.slideJump) goTo(Number(el.dataset.slideJump));
+  else if (el.dataset.jump) {
+    const last = (state.doc?.slideCount || 1) - 1;
+    const jumps = { nextslide: state.current + 1, previousslide: state.current - 1, firstslide: 0, lastslide: last };
+    if (el.dataset.jump in jumps) goTo(jumps[el.dataset.jump]);
+  }
+  return true;
+}
+$('#slide-host').addEventListener('click', (e) => handleSlideLink(e.target));
+
+// ---- keyboard ----------------------------------------------------------------------
+function isTyping(el) {
+  return el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (app.dataset.state !== 'viewer' || $('#shortcuts-dialog').open) return;
+  if (window.SlideLite.presenting()) return;
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl) {
+    switch (e.key) {
+      case '+': case '=': viewer.zoomIn(); break;
+      case '-': case '_': viewer.zoomOut(); break;
+      case '0': viewer.setMode('fit'); break;
+      case 'g': case 'G': slideInput.focus(); break;
+      case 'b': case 'B': toggleSidebar(); break;
+      default: return;
+    }
+    e.preventDefault();
+    return;
+  }
+  if (isTyping(document.activeElement) || e.altKey) return;
+  // Let focused buttons handle Space/Enter themselves.
+  if ((e.key === ' ' || e.key === 'Enter') && document.activeElement?.tagName === 'BUTTON') return;
+  switch (e.key) {
+    case 'ArrowRight': case 'ArrowDown': case 'PageDown': case ' ': case 'n': case 'N':
+      next(); break;
+    case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace': case 'p': case 'P':
+      prev(); break;
+    case 'Home': goTo(0); break;
+    case 'End': goTo(state.doc.slideCount - 1); break;
+    default: return;
+  }
+  e.preventDefault();
+});
+
+// ---- opening files -------------------------------------------------------------------
 $('#welcome-open').addEventListener('click', () => host.send('open-dialog'));
 
 function installDropTarget() {
@@ -56,26 +211,35 @@ function installDropTarget() {
       e.preventDefault();
       host.send('open-uri', { uri: uris[0] });
     }
-    // Otherwise let WebKit turn the drop into a file:// navigation, which the
+    // Otherwise WebKit turns the drop into a file:// navigation, which the
     // host intercepts and opens.
   });
 }
 installDropTarget();
 
+// ---- document lifecycle ----------------------------------------------------------------
 host.on('open-requested', ({ path }) => {
   setState('loading');
   $('#loading-text').textContent = `Opening ${path.split('/').pop()}…`;
 });
 
-// ---- document lifecycle ------------------------------------------------------
 host.on('document', async (info) => {
   state.doc = info;
   state.current = 0;
+  state.failed = null;
   slides.setDocument(info.base);
   document.title = `${info.title} — SlideLite`;
+  $('#slide-total').textContent = `/ ${info.slideCount}`;
   setState('viewer');
+  viewer.load(info);
   thumbs.load(info);
-  await showSlide(0);
+  await goTo(0);
+  $('#stage').focus({ preventScroll: true });
+  if (info.hasMacros) toast('This presentation contains macros. They are never run.');
+  else if (info.issues && info.issues.length) toast('Some damaged content was skipped.');
+  if (info.present || info.kind === 'slideshow') {
+    document.dispatchEvent(new CustomEvent('slidelite:present', { detail: { from: 0 } }));
+  }
 });
 
 host.on('load-error', (err) => {
@@ -95,44 +259,30 @@ $('#error-close').addEventListener('click', () => {
   setState(state.doc ? 'viewer' : 'welcome');
 });
 
-async function showSlide(index) {
-  const info = state.doc;
-  if (!info) return;
-  index = Math.max(0, Math.min(info.slideCount - 1, index));
-  state.current = index;
-  thumbs.setCurrent(index);
-  const hostEl = $('#slide-host');
-  await slides.mountSlide(hostEl, index);
-  hostEl.style.width = `${info.width}px`;
-  hostEl.style.height = `${info.height}px`;
-  $('#slide-input').value = String(index + 1);
-  $('#slide-total').textContent = `/ ${info.slideCount}`;
-  fit();
-}
+// ---- slide show entry points (implemented by presenter.js) ---------------------------------
+host.on('present', ({ from }) => {
+  if (!state.doc) return;
+  document.dispatchEvent(new CustomEvent('slidelite:present', { detail: { from: from === 'current' ? state.current : 0 } }));
+});
+$('#btn-present').addEventListener('click', () => {
+  document.dispatchEvent(new CustomEvent('slidelite:present', { detail: { from: state.current } }));
+});
 
-function fit() {
-  const info = state.doc;
-  if (!info) return;
-  const stage = $('#stage');
-  const pad = 32;
-  const scale = Math.max(0.05, Math.min((stage.clientWidth - pad * 2) / info.width, (stage.clientHeight - pad * 2) / info.height));
-  const canvas = $('#stage-canvas');
-  canvas.style.width = `${info.width * scale + pad * 2}px`;
-  canvas.style.height = `${info.height * scale + pad * 2}px`;
-  const hostEl = $('#slide-host');
-  hostEl.style.left = `${pad}px`;
-  hostEl.style.top = `${pad}px`;
-  hostEl.style.transform = `scale(${scale})`;
-}
-window.addEventListener('resize', fit);
-
-// ---- shortcuts dialog --------------------------------------------------------
+// ---- shortcuts dialog ----------------------------------------------------------------------
 const shortcuts = $('#shortcuts-dialog');
 $('#shortcuts-close').addEventListener('click', () => shortcuts.close());
 host.on('show-shortcuts', () => { if (!shortcuts.open) shortcuts.showModal(); });
 
-// Introspection hook used by the GUI test-suite and tools/screenshot.py.
-window.SlideLite = { state, showSlide: (n) => showSlide(n), thumbs };
+// Introspection hook used by the GUI test-suite and developer tools.
+window.SlideLite = {
+  state,
+  viewer,
+  thumbs,
+  goTo,
+  showSlide: (n) => goTo(n),
+  toast,
+  presenting: () => false,
+};
 
 applyTheme();
 host.send('ready');
