@@ -22,7 +22,7 @@ os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
 from slidelite.app.application import SlideLiteApplication  # noqa: E402  (pins gi versions)
 from slidelite.cli import LaunchOptions  # noqa: E402
 
-from gi.repository import Gdk, GLib  # noqa: E402  isort: skip
+from gi.repository import Gdk, Gio, GLib  # noqa: E402  isort: skip
 
 
 def main() -> int:
@@ -37,7 +37,7 @@ def main() -> int:
     width, height = (int(v) for v in args.size.split("x"))
 
     app = SlideLiteApplication()
-    app.set_flags(app.get_flags() | 32)  # G_APPLICATION_NON_UNIQUE
+    app.set_flags(app.get_flags() | Gio.ApplicationFlags.NON_UNIQUE)  # G_APPLICATION_NON_UNIQUE
 
     def capture(window) -> bool:
         gdk_window = window.get_window()

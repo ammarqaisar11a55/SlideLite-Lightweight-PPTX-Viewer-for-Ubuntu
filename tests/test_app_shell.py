@@ -6,14 +6,16 @@ pytestmark = pytest.mark.gui
 
 
 def test_window_loads_ui():
-    from gi.repository import GLib
+    from gi.repository import Gio, GLib
 
     import slidelite.app  # noqa: F401  (pins GTK 3 / WebKit2 4.1)
     from slidelite.app.application import SlideLiteApplication
     from slidelite.app.window import ViewerWindow
 
     app = SlideLiteApplication()
-    app.set_flags(app.get_flags() | 32)  # NON_UNIQUE so tests never talk to a running instance
+    app.set_flags(
+        app.get_flags() | Gio.ApplicationFlags.NON_UNIQUE
+    )  # NON_UNIQUE so tests never talk to a running instance
     seen = []
 
     def on_cmdline(application, _cmd):

@@ -106,7 +106,10 @@ class Harness:
     def wait_js(self, expression: str, timeout: float = 20.0):
         end = time.monotonic() + timeout
         while time.monotonic() < end:
-            value = self.js(f"return ({expression});")
+            try:
+                value = self.js(f"return ({expression});")
+            except RuntimeError:  # e.g. an element that is not mounted yet
+                value = None
             if value:
                 return value
             self.pump(0.05)
