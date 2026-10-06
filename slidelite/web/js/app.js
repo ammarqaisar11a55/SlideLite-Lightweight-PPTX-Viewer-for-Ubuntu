@@ -23,6 +23,14 @@ function setState(name) {
   app.dataset.state = name;
 }
 
+// ---- screen reader announcements --------------------------------------------------
+let announceTimer = 0;
+function announce(text) {
+  clearTimeout(announceTimer);
+  // Debounced so holding an arrow key does not flood the screen reader.
+  announceTimer = setTimeout(() => { $('#sr-status').textContent = text; }, 150);
+}
+
 // ---- toast -------------------------------------------------------------------
 let toastTimer = 0;
 export function toast(message, ms = 2600) {
@@ -85,8 +93,10 @@ async function goTo(index, { focusThumbs = false } = {}) {
   $('#btn-prev').disabled = index === 0;
   $('#btn-next').disabled = index === doc.slideCount - 1;
   if (focusThumbs) $('#thumbs').focus({ preventScroll: true });
-  await viewer.show(index);
+  const slideEl = await viewer.show(index);
   if (typeof viewer.mode === 'number' || viewer.mode === 'width') $('#stage-scroll').scrollTop = 0;
+  announce(`Slide ${index + 1} of ${doc.slideCount}${doc.slides[index]?.hidden ? ', hidden' : ''}`);
+  if (slideEl) slideEl.setAttribute('aria-label', `Slide ${index + 1} of ${doc.slideCount}`);
 }
 
 const next = () => goTo(state.current + 1);
@@ -203,7 +213,22 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     return;
   }
+  if (e.key === 'F6') {
+    cycleFocus(e.shiftKey ? -1 : 1);
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'Escape' && state.fullscreen) {
+    host.send('toggle-fullscreen');
+    e.preventDefault();
+    return;
+  }
   if (isTyping(document.activeElement) || e.altKey) return;
+  if (e.key === 'Enter' && document.activeElement === $('#thumbs')) {
+    $('#stage').focus();
+    e.preventDefault();
+    return;
+  }
   // Let focused buttons handle Space/Enter themselves.
   if ((e.key === ' ' || e.key === 'Enter') && document.activeElement?.tagName === 'BUTTON') return;
   switch (e.key) {
@@ -217,6 +242,18 @@ document.addEventListener('keydown', (e) => {
   }
   e.preventDefault();
 });
+
+// ---- focus regions (F6) -------------------------------------------------------------------
+function cycleFocus(direction) {
+  const regions = [$('#thumbs'), $('#stage'), $('#btn-prev').disabled ? $('#btn-next') : $('#btn-prev')]
+    .filter((el) => el && el.offsetParent !== null);
+  if (!regions.length) return;
+  const current = regions.findIndex((el) => el === document.activeElement || el.contains(document.activeElement));
+  const next = regions[(current + direction + regions.length) % regions.length];
+  next.focus();
+}
+
+host.on('fullscreen-changed', ({ fullscreen }) => { state.fullscreen = Boolean(fullscreen); });
 
 // ---- opening files -------------------------------------------------------------------
 $('#welcome-open').addEventListener('click', () => host.send('open-dialog'));

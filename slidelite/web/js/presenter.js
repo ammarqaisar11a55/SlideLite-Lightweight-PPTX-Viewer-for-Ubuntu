@@ -136,6 +136,8 @@ export class Presenter {
     if (!this.active) return;
     const timing = parseTiming(slideEl);
     this.slideBuilds = this.builds.prepare(slideEl, timing, { finished });
+    const status = document.getElementById('sr-status');
+    if (status) status.textContent = `Slide ${index + 1} of ${this.doc.slideCount}`;
     const old = this.layer;
     this.stage.appendChild(layer);
     this.layer = layer;

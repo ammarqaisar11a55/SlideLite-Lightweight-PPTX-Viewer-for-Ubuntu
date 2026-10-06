@@ -109,13 +109,14 @@
   </section>
 </div>
 
-<div id="presenter" aria-label="Slide show" tabindex="-1" hidden>
+<div id="presenter" role="region" aria-roledescription="slide show" aria-label="Slide show" tabindex="-1" hidden>
   <div id="pres-stage"></div>
   <div id="pres-blank" hidden></div>
   <div id="pres-hud" aria-live="polite"></div>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="sr-status" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <dialog id="shortcuts-dialog" aria-labelledby="shortcuts-title">
   <h2 id="shortcuts-title">Keyboard Shortcuts</h2>
@@ -127,6 +128,7 @@
       <dd><kbd>Home</kbd> / <kbd>End</kbd><span>First / last slide</span></dd>
       <dd><kbd>Ctrl</kbd>+<kbd>G</kbd><span>Go to slide</span></dd>
       <dd><kbd>Ctrl</kbd>+<kbd>B</kbd><span>Toggle thumbnails</span></dd>
+      <dd><kbd>F6</kbd><span>Move between panes</span></dd>
     </dl>
     <dl>
       <dt>View</dt>

@@ -278,7 +278,7 @@ class ShapeRenderer:
             transform = f' style="transform:scale({-1 if flip_h else 1},{-1 if flip_v else 1})"'
         defs_markup = f"<defs>{''.join(defs)}</defs>" if defs else ""
         return (
-            f'<svg class="geom" width="{num(max(w, 0.01))}" height="{num(max(h, 0.01))}"{transform}>'
+            f'<svg class="geom" aria-hidden="true" width="{num(max(w, 0.01))}" height="{num(max(h, 0.01))}"{transform}>'
             f"{defs_markup}{''.join(body)}</svg>"
         )
 
@@ -388,6 +388,8 @@ class ShapeRenderer:
         media = self.media_markup(ctx, nv_pr, w, h, blip_fill)
         if media:
             attrs += ' data-media="1"'
+        if "aria-label=" in attrs:
+            attrs += ' role="img"'
         return f'<div class="sp pic"{attrs} style="{self.box_css(x, y, w, h, rot, effects)}">{svg}{media}</div>'
 
     def image_markup(self, ctx, blip_fill, geom, defs, w, h) -> str:

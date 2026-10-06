@@ -57,7 +57,7 @@ def render_background(ctx: RenderContext, w: float, h: float) -> str:
         else ""
     )
     return (
-        f'<svg class="bg" width="{num(w)}" height="{num(h)}"{effects}>{defs_markup}{base}'
+        f'<svg class="bg" aria-hidden="true" width="{num(w)}" height="{num(h)}"{effects}>{defs_markup}{base}'
         f'<rect width="{num(w)}" height="{num(h)}" {fill.attrs()}/></svg>'
     )
 
@@ -114,7 +114,8 @@ def render_slide(
     )
     hidden = ' data-hidden="1"' if slide.hidden else ""
     html = (
-        f'<div class="slide" data-slide="{index + 1}"{hidden}{timing_attr} '
+        f'<div class="slide" role="group" aria-roledescription="slide" '
+        f'aria-label="Slide {index + 1}" data-slide="{index + 1}"{hidden}{timing_attr} '
         f'style="width:{px(w)};height:{px(h)}">'
         f"{''.join(layers)}</div>"
     )
