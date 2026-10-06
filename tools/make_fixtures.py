@@ -378,6 +378,125 @@ def groups() -> None:
     save(prs, "groups.pptx")
 
 
+def charts() -> None:
+    from pptx.chart.data import CategoryChartData, XyChartData
+    from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
+
+    prs = widescreen(Presentation())
+    cats = ["Q1", "Q2", "Q3", "Q4"]
+    specs = [
+        (XL_CHART_TYPE.COLUMN_CLUSTERED, "Clustered column"),
+        (XL_CHART_TYPE.BAR_STACKED, "Stacked bar"),
+        (XL_CHART_TYPE.LINE_MARKERS, "Line with markers"),
+        (XL_CHART_TYPE.PIE, "Pie"),
+        (XL_CHART_TYPE.DOUGHNUT, "Doughnut"),
+        (XL_CHART_TYPE.AREA_STACKED, "Stacked area"),
+    ]
+    for kind, title in specs:
+        slide = prs.slides.add_slide(prs.slide_layouts[5])
+        slide.shapes.title.text = title
+        data = CategoryChartData()
+        data.categories = cats
+        data.add_series("North", (19.2, 21.4, 16.7, 25.3))
+        if kind not in (XL_CHART_TYPE.PIE, XL_CHART_TYPE.DOUGHNUT):
+            data.add_series("South", (12.1, 15.8, 19.4, 14.2))
+            data.add_series("West", (8.4, 9.9, 13.6, 17.8))
+        frame = slide.shapes.add_chart(kind, Inches(1), Inches(1.6), Inches(11), Inches(5.4), data)
+        chart = frame.chart
+        chart.has_legend = True
+        chart.legend.position = XL_LEGEND_POSITION.BOTTOM
+        chart.legend.include_in_layout = False
+        if kind in (XL_CHART_TYPE.PIE, XL_CHART_TYPE.DOUGHNUT):
+            plot = chart.plots[0]
+            plot.has_data_labels = True
+            plot.data_labels.show_percentage = True
+            plot.data_labels.show_value = False
+    slide = prs.slides.add_slide(prs.slide_layouts[5])
+    slide.shapes.title.text = "Scatter"
+    xy = XyChartData()
+    series = xy.add_series("Samples")
+    for x, y in ((1, 2.5), (2, 3.9), (3, 4.1), (4, 6.2), (5, 6.8), (6, 8.9)):
+        series.add_data_point(x, y)
+    slide.shapes.add_chart(
+        XL_CHART_TYPE.XY_SCATTER, Inches(1), Inches(1.6), Inches(11), Inches(5.4), xy
+    )
+    save(prs, "charts.pptx")
+
+
+def smartart() -> None:
+    """A minimal SmartArt: data model + pre-rendered drawing (as PowerPoint writes)."""
+    prs = widescreen(Presentation())
+    slide = prs.slides.add_slide(prs.slide_layouts[5])
+    slide.shapes.title.text = "SmartArt"
+    tmp = io.BytesIO()
+    prs.save(tmp)
+    dgm_ns = "http://schemas.openxmlformats.org/drawingml/2006/diagram"
+    rel_ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    frame = (
+        '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="10" name="Diagram"/><p:cNvGraphicFramePr/><p:nvPr/>'
+        '</p:nvGraphicFramePr><p:xfrm><a:off x="1219200" y="1828800"/><a:ext cx="9144000" cy="3048000"/></p:xfrm>'
+        '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/diagram">'
+        f'<dgm:relIds xmlns:dgm="{dgm_ns}" xmlns:r="{rel_ns}" r:dm="rIdDm" r:lo="rIdLo" r:qs="rIdQs" r:cs="rIdCs"/>'
+        "</a:graphicData></a:graphic></p:graphicFrame>"
+    ).encode()
+    boxes = []
+    for i, label in enumerate(("Plan", "Build", "Ship")):
+        x = 304800 + i * 3048000
+        boxes.append(
+            f'<dsp:sp modelId="{{0000000{i}-0000-0000-0000-000000000000}}"><dsp:nvSpPr><dsp:cNvPr id="0" name=""/><dsp:cNvSpPr/></dsp:nvSpPr>'
+            f'<dsp:spPr><a:xfrm><a:off x="{x}" y="609600"/><a:ext cx="2438400" cy="1828800"/></a:xfrm>'
+            '<a:prstGeom prst="roundRect"><a:avLst/></a:prstGeom><a:solidFill><a:schemeClr val="accent1"/></a:solidFill>'
+            '<a:ln w="12700"><a:solidFill><a:schemeClr val="lt1"/></a:solidFill></a:ln></dsp:spPr>'
+            '<dsp:style><a:lnRef idx="2"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="1"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>'
+            '<a:effectRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef></dsp:style>'
+            '<dsp:txBody><a:bodyPr anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/>'
+            f'<a:r><a:rPr lang="en-US" sz="2800"/><a:t>{label}</a:t></a:r></a:p></dsp:txBody>'
+            f'<dsp:txXfrm><a:off x="{x}" y="609600"/><a:ext cx="2438400" cy="1828800"/></dsp:txXfrm></dsp:sp>'
+        )
+    drawing = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<dsp:drawing xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" '
+        'xmlns:dsp="http://schemas.microsoft.com/office/drawing/2008/diagram" '
+        'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><dsp:spTree><dsp:nvGrpSpPr>'
+        '<dsp:cNvPr id="0" name=""/><dsp:cNvGrpSpPr/></dsp:nvGrpSpPr><dsp:grpSpPr/>'
+        + "".join(boxes)
+        + "</dsp:spTree></dsp:drawing>"
+    ).encode()
+    data = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        f'<dgm:dataModel xmlns:dgm="{dgm_ns}" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        '<dgm:ptLst><dgm:pt modelId="1" type="doc"/>'
+        + "".join(
+            f'<dgm:pt modelId="{i + 2}"><dgm:t><a:p><a:r><a:t>{t}</a:t></a:r></a:p></dgm:t></dgm:pt>'
+            for i, t in enumerate(("Plan", "Build", "Ship"))
+        )
+        + '</dgm:ptLst><dgm:extLst><a:ext uri="http://schemas.microsoft.com/office/drawing/2008/diagram">'
+        '<dsp:dataModelExt xmlns:dsp="http://schemas.microsoft.com/office/drawing/2008/diagram" relId="rIdDraw" minVer="12.0"/>'
+        "</a:ext></dgm:extLst></dgm:dataModel>"
+    ).encode()
+    rt = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/"
+    rels_extra = (
+        f'<Relationship Id="rIdDm" Type="{rt}diagramData" Target="../diagrams/data1.xml"/>'
+        '<Relationship Id="rIdDraw" Type="http://schemas.microsoft.com/office/2007/relationships/diagramDrawing" '
+        'Target="../diagrams/drawing1.xml"/>'
+    ).encode()
+    out = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(tmp.getvalue())) as zin,
+        zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zout,
+    ):
+        for info in zin.infolist():
+            content = zin.read(info)
+            if info.filename == "ppt/slides/slide1.xml":
+                content = content.replace(b"</p:spTree>", frame + b"</p:spTree>")
+            elif info.filename == "ppt/slides/_rels/slide1.xml.rels":
+                content = content.replace(b"</Relationships>", rels_extra + b"</Relationships>")
+            zout.writestr(info, content)
+        zout.writestr("ppt/diagrams/data1.xml", data)
+        zout.writestr("ppt/diagrams/drawing1.xml", drawing)
+    (OUT / "smartart.pptx").write_bytes(deterministic(out.getvalue()))
+
+
 # -- broken / hostile ------------------------------------------------------------------
 
 
@@ -459,6 +578,8 @@ def main() -> None:
     text_formatting()
     fills()
     groups()
+    charts()
+    smartart()
     broken()
     print("fixtures written to", OUT)
 

@@ -47,3 +47,12 @@
   font: 18px 'Ubuntu Sans', 'DejaVu Sans', sans-serif; color: #555; text-align: center;
 }
 .slide-error-msg strong { font-size: 26px; color: #333; }
+.slide .gf.tbl { overflow: visible; }
+.slide table.tbl { border-collapse: collapse; table-layout: fixed; position: absolute; left: 0; top: 0; }
+.slide table.tbl td { box-sizing: border-box; overflow-wrap: break-word; white-space: pre-wrap; vertical-align: top; }
+.slide table.tbl td p { margin: 0; }
+.slide .gf.chart > svg, .slide .gf.dgm > .dgm-tree { position: absolute; left: 0; top: 0; }
+.slide .dgm-fallback { position: absolute; left: 0; top: 0; display: flex; align-items: center; color: #333; font-family: 'Carlito', 'Liberation Sans', sans-serif; }
+.slide .dgm-fallback ul { margin: 0; padding-left: 1.2em; }
+/* PowerPoint does not apply space-after to the last paragraph of a text box. */
+.slide .tx p:last-child, .slide table.tbl td p:last-child { margin-bottom: 0 !important; }

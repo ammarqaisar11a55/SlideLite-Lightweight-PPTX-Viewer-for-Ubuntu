@@ -14,7 +14,7 @@ import secrets
 import threading
 from collections import OrderedDict
 
-from slidelite.presentation import document
+from slidelite.presentation import document, metafile
 from slidelite.presentation.parts import Deck
 from slidelite.render.slide import render_slide
 from slidelite.server.router import Response, Router, guess_mime
@@ -29,6 +29,7 @@ class DocumentSession:
         self.deck = Deck(presentation)
         self.cache_size = 48
         self._cache: OrderedDict[int, str] = OrderedDict()
+        self._converted: dict[str, Response] = {}
 
     @property
     def prefix(self) -> str:
@@ -72,6 +73,8 @@ class DocumentSession:
                 return Response(self.render_slide(number - 1).encode(), "text/html")
         if sub.startswith("part/"):
             return self.part(sub[len("part/") :])
+        if sub.startswith("image/"):
+            return self.converted_image(sub[len("image/") :])
         return Response.not_found(sub)
 
     def render_slide(self, index: int) -> str:
@@ -96,6 +99,44 @@ class DocumentSession:
             data = pkg.read(partname)
         mime = pkg.content_type(partname) or guess_mime(partname)
         return Response(data, mime, headers={"Cache-Control": "max-age=3600"})
+
+    def converted_image(self, partname: str) -> Response:
+        """Images WebKit cannot decode (EMF/WMF/TIFF), converted on demand."""
+        partname = "/" + partname.lstrip("/")
+        pkg = self.presentation.package
+        if not pkg.has(partname) or not partname.lower().startswith(
+            ("/ppt/media/", "/ppt/embeddings/")
+        ):
+            return Response.not_found(partname)
+        cached = self._converted.get(partname)
+        if cached is not None:
+            return cached
+        with self.lock:
+            data = pkg.read(partname)
+        ext = partname.rsplit(".", 1)[-1].lower()
+        ctype = pkg.content_type(partname).lower()
+        resp = None
+        if ext in ("emf", "wmf", "emz", "wmz") or "emf" in ctype or "wmf" in ctype:
+            if ext in ("emz", "wmz") or data[:2] == b"\x1f\x8b":
+                import gzip
+
+                try:
+                    data = gzip.decompress(data)[: 64 * 1024 * 1024]
+                except OSError:
+                    data = b""
+            try:
+                svg = metafile.to_svg(data)
+                resp = Response(svg.encode("utf-8"), "image/svg+xml")
+            except metafile.MetafileError:
+                resp = None
+        if resp is None:
+            png = _pixbuf_png(data)
+            resp = (
+                Response(png, "image/png") if png else Response(_UNSUPPORTED_SVG, "image/svg+xml")
+            )
+        resp.headers["Cache-Control"] = "max-age=3600"
+        self._converted[partname] = resp
+        return resp
 
     def close(self) -> None:
         self.presentation.close()
@@ -146,3 +187,30 @@ def error_payload(exc: Exception, path: str) -> dict:
         "detail": getattr(exc, "detail", ""),
         "recoverable": isinstance(exc, RecoverablePackageError),
     }
+
+
+_UNSUPPORTED_SVG = (
+    b'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120">'
+    b'<rect width="200" height="120" fill="#eeeeee"/><path d="M70 80l25-30 20 22 12-12 23 20z" fill="#c4c4c4"/>'
+    b'<circle cx="80" cy="45" r="8" fill="#c4c4c4"/></svg>'
+)
+
+
+def _pixbuf_png(data: bytes) -> bytes | None:
+    """Decode other formats (TIFF, ...) with GdkPixbuf when available."""
+    try:
+        import gi
+
+        gi.require_version("GdkPixbuf", "2.0")
+        from gi.repository import GdkPixbuf
+
+        loader = GdkPixbuf.PixbufLoader()
+        loader.write(data)
+        loader.close()
+        pixbuf = loader.get_pixbuf()
+        if pixbuf is None:
+            return None
+        ok, buffer = pixbuf.save_to_bufferv("png", [], [])
+        return bytes(buffer) if ok else None
+    except (ImportError, ValueError, Exception):  # noqa: BLE001 - any decoder failure means "unsupported"
+        return None

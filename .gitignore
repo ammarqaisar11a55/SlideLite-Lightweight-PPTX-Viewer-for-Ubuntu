@@ -12,3 +12,6 @@ dist/
 *.AppImage
 # Local sample decks used for manual comparison must never be committed
 /samples/
+
+# Screenshots of personal decks (kept locally, never published)
+/screenshots-private/

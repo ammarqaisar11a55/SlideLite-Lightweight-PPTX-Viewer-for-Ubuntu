@@ -581,10 +581,8 @@ def _is_link(hlink) -> bool:
     return bool(rid(hlink, "id")) and not action.startswith("ppaction://hlinkshowjump")
 
 
-def render_text_frame(
-    ctx: RenderContext, tx_body, chain: StyleChain, body: dict, box: TextBox, flip_v: bool = False
-) -> str:
-    """HTML for a text body positioned inside its shape (shape-local px)."""
+def render_paragraphs(ctx: RenderContext, tx_body, chain: StyleChain, body: dict) -> str:
+    """The paragraphs of a text body as flow HTML ('' when there is no text)."""
     if tx_body is None:
         return ""
     paragraphs = tx_body.findall(q("a:p"))
@@ -592,6 +590,8 @@ def render_text_frame(
         return ""
     local_chain = chain.with_overlay(tx_body.find(q("a:lstStyle")))
     ctx = ctx.child()
+    ctx.font_scale = 1.0
+    ctx.spacing_reduction = 0.0
     if body.get("autofit") == "normAutofit":
         try:
             ctx.font_scale = int(body.get("fontScale") or 100000) / 100000.0
@@ -601,11 +601,17 @@ def render_text_frame(
             ctx.spacing_reduction = int(body.get("lnSpcReduction") or 0) / 100000.0
         except ValueError:
             ctx.spacing_reduction = 0.0
-    else:
-        ctx.font_scale = 1.0
-        ctx.spacing_reduction = 0.0
     renderer = TextRenderer(ctx, local_chain)
-    html_paragraphs = "".join(renderer.render_paragraph(p, ctx.slide_number) for p in paragraphs)
+    return "".join(renderer.render_paragraph(p, ctx.slide_number) for p in paragraphs)
+
+
+def render_text_frame(
+    ctx: RenderContext, tx_body, chain: StyleChain, body: dict, box: TextBox, flip_v: bool = False
+) -> str:
+    """HTML for a text body positioned inside its shape (shape-local px)."""
+    html_paragraphs = render_paragraphs(ctx, tx_body, chain, body)
+    if not html_paragraphs:
+        return ""
 
     l_ins = emu(body.get("lIns", 91440))
     t_ins = emu(body.get("tIns", 45720))
