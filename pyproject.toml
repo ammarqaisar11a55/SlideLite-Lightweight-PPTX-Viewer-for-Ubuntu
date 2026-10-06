@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slidelite"
+dynamic = ["version"]
+description = "A lightweight, offline PPTX presentation viewer for Ubuntu"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Muhammad Ammar Qaisar" }]
+requires-python = ">=3.12"
+# Runtime dependencies are system packages (python3-gi, gir1.2-gtk-3.0,
+# gir1.2-webkit2-4.1); see packaging/debian/control.
+dependencies = []
+classifiers = [
+    "Environment :: X11 Applications :: GTK",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Office Suites",
+]
+
+[project.scripts]
+slidelite = "slidelite.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "slidelite.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["slidelite*"]
+
+[tool.setuptools.package-data]
+slidelite = ["web/**/*", "data/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "gui: needs a display and GTK/WebKit (skipped when unavailable)",
+    "slow: stress tests with large generated presentations",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["slidelite/web"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+ignore = [
+    "S101",  # asserts are fine in tests
+    "S314",  # xml parsing goes through slidelite.presentation.xmlsafe
+    "S603",
+    "S607",
+    "SIM105",  # explicit try/except/pass reads fine
+    "E402",  # gi.require_version must run before gi.repository imports
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "B011"]
+"tools/**" = ["S"]
