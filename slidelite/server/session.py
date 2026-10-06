@@ -12,8 +12,11 @@ from __future__ import annotations
 import json
 import secrets
 import threading
+from collections import OrderedDict
 
 from slidelite.presentation import document
+from slidelite.presentation.parts import Deck
+from slidelite.render.slide import render_slide
 from slidelite.server.router import Response, Router, guess_mime
 
 
@@ -23,6 +26,9 @@ class DocumentSession:
         self.path = path
         self.id = secrets.token_hex(8)
         self.lock = threading.RLock()
+        self.deck = Deck(presentation)
+        self.cache_size = 48
+        self._cache: OrderedDict[int, str] = OrderedDict()
 
     @property
     def prefix(self) -> str:
@@ -69,8 +75,15 @@ class DocumentSession:
         return Response.not_found(sub)
 
     def render_slide(self, index: int) -> str:
-        ref = self.presentation.slides[index]
-        return f'<div class="slide" data-slide="{ref.index + 1}"></div>'
+        cached = self._cache.get(index)
+        if cached is not None:
+            self._cache.move_to_end(index)
+            return cached
+        result = render_slide(self.deck, index, base_url=f"doc/{self.id}/")
+        self._cache[index] = result.html
+        while len(self._cache) > self.cache_size:
+            self._cache.popitem(last=False)
+        return result.html
 
     def part(self, partname: str) -> Response:
         partname = "/" + partname.lstrip("/")

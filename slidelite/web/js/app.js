@@ -1,5 +1,6 @@
 // SlideLite viewer controller.
 import * as host from './host.js';
+import * as slides from './slides.js';
 
 const $ = (sel) => document.querySelector(sel);
 const app = $('#app');
@@ -67,6 +68,7 @@ host.on('open-requested', ({ path }) => {
 host.on('document', async (info) => {
   state.doc = info;
   state.current = 0;
+  slides.setDocument(info.base);
   document.title = `${info.title} — SlideLite`;
   setState('viewer');
   await showSlide(0);
@@ -91,9 +93,8 @@ $('#error-close').addEventListener('click', () => {
 
 async function showSlide(index) {
   const info = state.doc;
-  const res = await fetch(`${info.base}slide/${index + 1}.html`);
   const hostEl = $('#slide-host');
-  hostEl.innerHTML = res.ok ? await res.text() : '';
+  await slides.mountSlide(hostEl, index);
   hostEl.style.width = `${info.width}px`;
   hostEl.style.height = `${info.height}px`;
   $('#slide-input').value = String(index + 1);
@@ -121,6 +122,8 @@ window.addEventListener('resize', fit);
 const shortcuts = $('#shortcuts-dialog');
 $('#shortcuts-close').addEventListener('click', () => shortcuts.close());
 host.on('show-shortcuts', () => { if (!shortcuts.open) shortcuts.showModal(); });
+
+window.SlideLiteDebug = { showSlide: (n) => showSlide(n) };
 
 applyTheme();
 host.send('ready');

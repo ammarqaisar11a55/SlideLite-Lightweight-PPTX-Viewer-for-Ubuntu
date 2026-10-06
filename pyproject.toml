@@ -54,6 +54,8 @@ ignore = [
     "S607",
     "SIM105",  # explicit try/except/pass reads fine
     "E402",  # gi.require_version must run before gi.repository imports
+    "E501",  # the formatter owns line length; long markup strings stay intact
+    "E741",  # l/t/r/b are the DrawingML names for rectangle insets
 ]
 
 [tool.ruff.lint.per-file-ignores]

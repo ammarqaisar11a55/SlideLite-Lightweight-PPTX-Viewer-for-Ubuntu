@@ -204,6 +204,164 @@ def aspect_ratios() -> None:
     save(prs, "aspect-custom.pptx")
 
 
+def _xml(fragment: str):
+    """Parse a DrawingML fragment written with the a:/p: prefixes."""
+    from pptx.oxml import parse_xml
+
+    ns = (
+        ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
+        ' xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"'
+    )
+    head, _, rest = (
+        fragment.partition(" ")
+        if fragment.index(" ") < fragment.index(">")
+        else fragment.partition(">")
+    )
+    sep = " " if fragment.index(" ") < fragment.index(">") else ">"
+    return parse_xml(f"{head}{ns}{sep}{rest}")
+
+
+def text_formatting() -> None:
+    prs = widescreen(Presentation())
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    box = slide.shapes.add_textbox(Inches(0.5), Inches(0.4), Inches(6), Inches(6))
+    tf = box.text_frame
+    tf.word_wrap = True
+    samples = [
+        ("Liberation Serif 28pt", {"name": "Times New Roman", "size": Pt(28)}),
+        ("Courier New 20pt", {"name": "Courier New", "size": Pt(20)}),
+        ("Strikethrough", {"strike": True}),
+        ("Superscript x2", {"baseline": "30000"}),
+        ("Highlighted", {"highlight": True}),
+        ("Letter spacing", {"spc": "600"}),
+        ("ALL CAPS via cap", {"cap": "all"}),
+    ]
+    tf.text = "Text formatting"
+    for text, opts in samples:
+        p = tf.add_paragraph()
+        run = p.add_run()
+        run.text = text
+        if "name" in opts:
+            run.font.name = opts["name"]
+        if "size" in opts:
+            run.font.size = opts["size"]
+        rpr = run._r.get_or_add_rPr()
+        if opts.get("strike"):
+            rpr.set("strike", "sngStrike")
+        if opts.get("baseline"):
+            rpr.set("baseline", opts["baseline"])
+        if opts.get("spc"):
+            rpr.set("spc", opts["spc"])
+        if opts.get("cap"):
+            rpr.set("cap", opts["cap"])
+        if opts.get("highlight"):
+            rpr.append(_xml('<a:highlight><a:srgbClr val="FFFF00"/></a:highlight>'))
+    numbered = slide.shapes.add_textbox(Inches(7), Inches(0.4), Inches(5.5), Inches(3))
+    ntf = numbered.text_frame
+    ntf.text = "First numbered"
+    for text in ("Second numbered", "Third numbered"):
+        ntf.add_paragraph().text = text
+    for p in ntf.paragraphs:
+        ppr = p._p.get_or_add_pPr()
+        ppr.set("marL", "342900")
+        ppr.set("indent", "-342900")
+        ppr.append(_xml('<a:buFont typeface="+mj-lt"/>'))
+        ppr.append(_xml('<a:buAutoNum type="arabicPeriod"/>'))
+        p.line_spacing = 1.5
+    vertical = slide.shapes.add_textbox(Inches(7), Inches(4), Inches(1), Inches(3))
+    vertical.text_frame.text = "Vertical text"
+    vertical.text_frame._txBody.bodyPr.set("vert", "vert")
+    rotated = slide.shapes.add_textbox(Inches(9), Inches(4.5), Inches(3), Inches(1))
+    rotated.text_frame.text = "Rotated 30°"
+    rotated.rotation = 30
+    wing = slide.shapes.add_textbox(Inches(9), Inches(6), Inches(4), Inches(1))
+    wing.text_frame.text = "Wingdings bullet"
+    ppr = wing.text_frame.paragraphs[0]._p.get_or_add_pPr()
+    ppr.set("marL", "285750")
+    ppr.set("indent", "-285750")
+    ppr.append(_xml('<a:buFont typeface="Wingdings" pitchFamily="2" charset="2"/>'))
+    ppr.append(_xml('<a:buChar char="&#167;"/>'))
+    save(prs, "text-formatting.pptx")
+
+
+def fills() -> None:
+    prs = widescreen(Presentation())
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    slide.background.fill.gradient()
+    slide.background.fill.gradient_angle = 90
+    stops = slide.background.fill.gradient_stops
+    stops[0].color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    stops[1].color.rgb = RGBColor(0xC8, 0xD8, 0xF0)
+    solid = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, Inches(0.5), Inches(0.5), Inches(3), Inches(2)
+    )
+    solid.fill.solid()
+    solid.fill.fore_color.rgb = RGBColor(0x20, 0x80, 0x40)
+    grad = slide.shapes.add_shape(
+        MSO_SHAPE.ROUNDED_RECTANGLE, Inches(4), Inches(0.5), Inches(3), Inches(2)
+    )
+    grad.fill.gradient()
+    grad.fill.gradient_angle = 45
+    patt = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(7.5), Inches(0.5), Inches(3), Inches(2))
+    from pptx.enum.dml import MSO_PATTERN
+
+    patt.fill.patterned()
+    patt.fill.pattern = MSO_PATTERN.DIAGONAL_BRICK
+    patt.fill.fore_color.rgb = RGBColor(0x80, 0x20, 0x20)
+    patt.fill.back_color.rgb = RGBColor(0xFF, 0xF0, 0xE0)
+    transparent = slide.shapes.add_shape(
+        MSO_SHAPE.OVAL, Inches(1.5), Inches(1.5), Inches(3), Inches(3)
+    )
+    transparent.fill.solid()
+    transparent.fill.fore_color.rgb = RGBColor(0x30, 0x60, 0xF0)
+    srgb = transparent.fill._xPr.find(
+        ".//{http://schemas.openxmlformats.org/drawingml/2006/main}srgbClr"
+    )
+    srgb.append(_xml('<a:alpha val="50000"/>'))
+    dashed = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, Inches(5), Inches(3.5), Inches(3), Inches(2)
+    )
+    dashed.fill.background()
+    dashed.line.color.rgb = RGBColor(0xC0, 0x30, 0x30)
+    dashed.line.width = Pt(4)
+    from pptx.enum.dml import MSO_LINE_DASH_STYLE
+
+    dashed.line.dash_style = MSO_LINE_DASH_STYLE.DASH
+    shadowed = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, Inches(9), Inches(3.5), Inches(3), Inches(2)
+    )
+    sppr = shadowed._element.spPr
+    sppr.append(
+        _xml(
+            '<a:effectLst><a:outerShdw blurRad="76200" dist="38100" dir="2700000" algn="tl">'
+            '<a:prstClr val="black"><a:alpha val="40000"/></a:prstClr></a:outerShdw></a:effectLst>'
+        )
+    )
+    arrow = slide.shapes.add_connector(1, Inches(0.5), Inches(6.5), Inches(8), Inches(6.5))
+    arrow.line.width = Pt(3)
+    ln = arrow.line._get_or_add_ln()
+    ln.append(_xml('<a:tailEnd type="triangle" w="med" len="med"/>'))
+    save(prs, "fills.pptx")
+
+
+def groups() -> None:
+    prs = widescreen(Presentation())
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    outer = slide.shapes.add_group_shape()
+    a = outer.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1), Inches(1), Inches(2), Inches(1))
+    a.text = "A"
+    inner = outer.shapes.add_group_shape()
+    inner.shapes.add_shape(MSO_SHAPE.OVAL, Inches(3.5), Inches(1), Inches(1), Inches(1)).text = "B"
+    inner.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(3.5), Inches(2.2), Inches(2), Inches(0.8))
+    flipped = slide.shapes.add_shape(
+        MSO_SHAPE.RIGHT_TRIANGLE, Inches(7), Inches(1), Inches(2), Inches(2)
+    )
+    flipped._element.spPr.find("{http://schemas.openxmlformats.org/drawingml/2006/main}xfrm").set(
+        "flipH", "1"
+    )
+    save(prs, "groups.pptx")
+
+
 # -- broken / hostile ------------------------------------------------------------------
 
 
@@ -281,6 +439,9 @@ def main() -> None:
     tables()
     multi_slide()
     aspect_ratios()
+    text_formatting()
+    fills()
+    groups()
     broken()
     print("fixtures written to", OUT)
 
