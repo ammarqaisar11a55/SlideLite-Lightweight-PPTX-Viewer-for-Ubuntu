@@ -20,7 +20,7 @@ test:
 	$(PYTHON) -m pytest
 
 test-js:
-	node --test tests/js/
+	node --test tests/js/*.test.mjs
 
 lint:
 	ruff check slidelite tests tools

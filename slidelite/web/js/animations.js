@@ -10,7 +10,12 @@
 
 import { rectsPath, seededOrder, stepped, wedgePath } from './transitions.js';
 
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+// Evaluated lazily so the module can also be imported outside a browser (unit tests).
+const reduceMotion = {
+  get matches() {
+    return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  },
+};
 
 // Fly In / Peek In / Crawl directions (presetSubtype): where the shape comes from.
 const FROM = {

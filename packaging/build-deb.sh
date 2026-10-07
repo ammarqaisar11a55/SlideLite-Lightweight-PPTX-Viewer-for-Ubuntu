@@ -105,5 +105,6 @@ CONTROL
 chmod 0644 "$DEST/DEBIAN/control"
 
 mkdir -p "$OUT_DIR"
-dpkg-deb --root-owner-group --build "$DEST" "$OUT_DIR/$PKG.deb" >/dev/null
+# xz keeps the package readable by every Debian/Ubuntu dpkg (and Python's tarfile).
+dpkg-deb -Zxz --root-owner-group --build "$DEST" "$OUT_DIR/$PKG.deb" >/dev/null
 echo "$OUT_DIR/$PKG.deb"

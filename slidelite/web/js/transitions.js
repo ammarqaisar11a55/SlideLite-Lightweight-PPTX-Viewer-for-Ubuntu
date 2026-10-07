@@ -6,7 +6,12 @@
 // pattern effects (random bars, blinds, checkerboard, dissolve...) animate a
 // clip-path step by step.  Unknown effects fall back to a fade.
 
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+// Evaluated lazily so the module can also be imported outside a browser (unit tests).
+const reduceMotion = {
+  get matches() {
+    return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  },
+};
 
 const DIRS = {
   l: [-1, 0], r: [1, 0], u: [0, -1], d: [0, 1],

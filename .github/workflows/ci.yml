@@ -29,7 +29,7 @@ jobs:
       - name: Python tests
         run: xvfb-run -a .venv/bin/python -m pytest
       - name: JS tests
-        run: if ls tests/js/*.test.mjs >/dev/null 2>&1; then node --test tests/js/; fi
+        run: node --test tests/js/*.test.mjs
       - name: Build .deb
         run: if [ -x packaging/build-deb.sh ]; then packaging/build-deb.sh; fi
       - uses: actions/upload-artifact@v5
