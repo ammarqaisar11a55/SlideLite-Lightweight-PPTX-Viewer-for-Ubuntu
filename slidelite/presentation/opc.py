@@ -141,7 +141,7 @@ class Package:
         self._check_container()
         try:
             self.zip = zipfile.ZipFile(self._fh)
-        except (zipfile.BadZipFile, OSError, ValueError) as exc:
+        except Exception as exc:  # noqa: BLE001 - any archive failure means a damaged file
             self.close()
             raise PackageError(
                 "The file is damaged or is not a PowerPoint presentation.", str(exc)

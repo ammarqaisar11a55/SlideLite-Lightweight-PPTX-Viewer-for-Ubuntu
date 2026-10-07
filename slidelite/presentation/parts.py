@@ -87,18 +87,30 @@ class Part:
         self.csld = csld
         self.sp_tree = csld.find(q("p:spTree")) if csld is not None else None
         self._placeholders: list[Placeholder] | None = None
+        self._fallback_theme: Theme | None = None
 
     # -- theme & colours --------------------------------------------------------
     @property
-    def master(self) -> Master:
+    def master(self) -> Master | None:
+        """The slide master this part inherits from (None if unreadable)."""
         part: Part = self
-        while part.parent is not None:
+        for _ in range(8):  # slide -> layout -> master; never loop forever
+            if isinstance(part, Master):
+                return part
+            if part.parent is None:
+                return None
             part = part.parent
-        return part  # type: ignore[return-value]
+        return None
 
     @property
     def theme(self) -> Theme:
-        return self.master.theme
+        master = self.master
+        if master is None:
+            # No readable master: render with the default Office theme.
+            if self._fallback_theme is None:
+                self._fallback_theme = Theme()
+            return self._fallback_theme
+        return master.theme
 
     @property
     def clr_map(self) -> dict[str, str]:
