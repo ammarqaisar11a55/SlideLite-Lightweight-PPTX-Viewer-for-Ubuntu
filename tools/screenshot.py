@@ -40,6 +40,7 @@ def main() -> int:
     parser.add_argument("--delay", type=int, default=2500)
     parser.add_argument("--size", default="1280x800")
     parser.add_argument("--present", action="store_true")
+    parser.add_argument("--theme", choices=("system", "light", "dark"))
     args = parser.parse_args()
     width, height = (int(v) for v in args.size.split("x"))
 
@@ -68,6 +69,8 @@ def main() -> int:
         app.launch(LaunchOptions(files, False, args.present))
         window = app.get_windows()[0]
         window.resize(width, height)
+        if args.theme:
+            app.activate_action("theme", GLib.Variant("s", args.theme))
         GLib.timeout_add(args.delay // 2, run_js, window, args.js)
         GLib.timeout_add(args.delay, capture, window)
 
