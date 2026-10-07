@@ -46,10 +46,6 @@ def _style_for(ctx: RenderContext, tbl_pr):
     return custom if custom is not None else builtin_style(style_id)
 
 
-def _color_el(ctx, el):
-    return ctx.colors.resolve(el)
-
-
 class _Part:
     """Resolved style part: fill element, text props, border lines."""
 

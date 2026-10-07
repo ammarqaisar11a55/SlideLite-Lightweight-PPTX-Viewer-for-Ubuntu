@@ -125,11 +125,4 @@ export class Thumbnails {
     this.list.setAttribute('aria-activedescendant', item.id);
     if (scroll) item.scrollIntoView({ block: 'nearest' });
   }
-
-  invalidate(index) {
-    const item = this.items[index];
-    if (!item) return;
-    delete item.dataset.mounted;
-    if (this.visible.has(index)) this.mount(index);
-  }
 }

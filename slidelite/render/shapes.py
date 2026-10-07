@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import traceback
 from dataclasses import dataclass
 
 from slidelite.presentation import geometry
@@ -11,9 +10,7 @@ from slidelite.presentation.xmlsafe import attr_bool, attr_int, local, q, rid
 from slidelite.render import paint
 from slidelite.render.context import EMU_PER_PX, RenderContext
 from slidelite.render.markup import esc, num, px
-from slidelite.render.text import StyleChain, TextBox, merge_body_pr, parse_rpr, render_text_frame
-
-A_NS = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+from slidelite.render.text import StyleChain, TextBox, merge_body_pr, render_text_frame
 
 
 @dataclass
@@ -114,8 +111,6 @@ class ShapeRenderer:
                 out.append(self.render_element(el, ctx, frame))
             except Exception as exc:  # one broken shape never breaks the slide
                 ctx.warn(f"shape skipped on {ctx.part.partname}: {type(exc).__name__}: {exc}")
-                if __debug__ and ctx.deck.package.path is None:
-                    traceback.print_exc()
         return "".join(out)
 
     def render_element(self, el, ctx: RenderContext, frame: Frame) -> str:
@@ -520,7 +515,3 @@ class ShapeRenderer:
         if not inner:
             return ""
         return f'<div class="sp gf {kind}"{attrs} style="{self.box_css(x, y, w, h, rot)}">{inner}</div>'
-
-
-def run_props(el) -> dict:
-    return parse_rpr(el)

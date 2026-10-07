@@ -8,7 +8,7 @@ rules out XXE and entity-expansion ("billion laughs") attacks.
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from functools import lru_cache
 
 NS = {
@@ -151,22 +151,8 @@ def children(el: ET.Element | None, name: str) -> list[ET.Element]:
     return [] if el is None else el.findall(q(name))
 
 
-def path(el: ET.Element | None, *names: str) -> ET.Element | None:
-    for name in names:
-        if el is None:
-            return None
-        el = el.find(q(name))
-    return el
-
-
 def local(tag: str) -> str:
     return tag.rpartition("}")[2]
-
-
-def iter_local(el: ET.Element, name: str) -> Iterator[ET.Element]:
-    for node in el.iter():
-        if local(node.tag) == name:
-            yield node
 
 
 def attr_int(el: ET.Element | None, name: str, default: int | None = None) -> int | None:

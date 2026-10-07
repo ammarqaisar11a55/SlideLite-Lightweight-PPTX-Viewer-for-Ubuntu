@@ -27,7 +27,6 @@ export class Presenter {
     this.builds = builds;
     this.active = false;
     this.busy = false;
-    this.queue = [];
     this.layer = null;
     this.position = 0;
     this.order = [];

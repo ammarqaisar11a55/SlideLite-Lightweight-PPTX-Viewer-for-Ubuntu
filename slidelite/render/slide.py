@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import traceback
 from dataclasses import dataclass, field
 
 from slidelite.presentation.parts import Deck, Layout, Master
@@ -102,7 +101,6 @@ def render_slide(
     try:
         layers.append(renderer.render_tree(slide.sp_tree, ctx, root_frame))
     except Exception as exc:  # pragma: no cover - render_tree already isolates shapes
-        traceback.print_exc()
         deck.warn(f"slide {index + 1}: {exc}")
     try:
         timing = slide_timing(slide)
