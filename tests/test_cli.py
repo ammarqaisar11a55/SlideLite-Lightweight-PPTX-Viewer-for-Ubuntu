@@ -31,3 +31,11 @@ def test_version_flag(capsys):
         parse_args(["--version"])
     assert exc.value.code == 0
     assert "SlideLite" in capsys.readouterr().out
+
+
+def test_smoke_test_flag_is_hidden(capsys):
+    assert parse_args(["--smoke-test", "a.pptx"]).smoke_test
+    assert not parse_args(["a.pptx"]).smoke_test
+    with pytest.raises(SystemExit):
+        parse_args(["--help"])
+    assert "--smoke-test" not in capsys.readouterr().out

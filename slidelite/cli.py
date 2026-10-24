@@ -18,6 +18,7 @@ class LaunchOptions:
     files: tuple[str, ...] = ()
     fullscreen: bool = False
     presentation: bool = False
+    smoke_test: bool = False
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -34,13 +35,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="start the slide show immediately",
     )
     parser.add_argument("--version", action="version", version=f"{APP_NAME} {__version__}")
+    # Packaging check (CI, snaps): open FILE, wait until a slide has rendered, exit 0/1.
+    parser.add_argument("--smoke-test", action="store_true", help=argparse.SUPPRESS)
     return parser
 
 
 def parse_args(argv: list[str] | None = None) -> LaunchOptions:
     ns = build_parser().parse_args(argv)
     files = tuple(os.path.abspath(f) if "://" not in f else f for f in ns.files)
-    return LaunchOptions(files=files, fullscreen=ns.fullscreen, presentation=ns.presentation)
+    return LaunchOptions(
+        files=files,
+        fullscreen=ns.fullscreen,
+        presentation=ns.presentation,
+        smoke_test=ns.smoke_test,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

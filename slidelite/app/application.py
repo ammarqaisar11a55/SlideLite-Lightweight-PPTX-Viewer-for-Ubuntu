@@ -19,11 +19,17 @@ from slidelite.settings import Settings
 
 
 class SlideLiteApplication(Gtk.Application):
-    def __init__(self, application_id: str | None = APP_ID) -> None:
+    def __init__(self, application_id: str | None = APP_ID, smoke_test: bool = False) -> None:
         # application_id=None gives an isolated, non-D-Bus instance (tests, tools).
-        super().__init__(
-            application_id=application_id, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE
-        )
+        flags = Gio.ApplicationFlags.HANDLES_COMMAND_LINE
+        if smoke_test or os.environ.get("SNAP"):
+            # Strictly confined snaps may not own a session-bus name without a
+            # dbus slot, and the smoke test must never hand off to a running
+            # instance: run each launch as its own process.
+            flags |= Gio.ApplicationFlags.NON_UNIQUE
+        super().__init__(application_id=application_id, flags=flags)
+        self.smoke_test = smoke_test
+        self.smoke_passed = False
         GLib.set_application_name(APP_NAME)
         GLib.set_prgname("slidelite")
         self.debug = bool(os.environ.get("SLIDELITE_DEBUG"))
@@ -157,6 +163,9 @@ class SlideLiteApplication(Gtk.Application):
 
             traceback.print_exception(exc)
         window.webview.send("load-error", error_payload(exc, path))
+        if self.smoke_test:
+            print(f"SlideLite smoke test failed: {exc}", file=sys.stderr)
+            self.quit()
         return False
 
     def handle_page_message(self, window: ViewerWindow, message: dict) -> None:
@@ -165,6 +174,13 @@ class SlideLiteApplication(Gtk.Application):
             print("page:", message, file=sys.stderr)
         if cmd == "ready":
             self.send_preferences(window)
+        elif cmd == "rendered" and self.smoke_test:
+            shapes = message.get("shapes", 0)
+            print(
+                f"SlideLite smoke test passed: slide {message.get('slide')} rendered ({shapes} shapes)"
+            )
+            self.smoke_passed = True
+            self.quit()
         elif cmd == "open-dialog":
             window.choose_file()
         elif cmd == "open-uri":
@@ -305,8 +321,22 @@ class SlideLiteApplication(Gtk.Application):
 
 
 def run(options: LaunchOptions) -> int:
-    app = SlideLiteApplication()
-    return app.run([sys.argv[0], *_argv_from_options(options)])
+    app = SlideLiteApplication(smoke_test=options.smoke_test)
+    if options.smoke_test:
+        if not options.files:
+            print("SlideLite smoke test needs a presentation to open", file=sys.stderr)
+            return 2
+
+        def timeout() -> bool:
+            print("SlideLite smoke test failed: no slide rendered within 90 s", file=sys.stderr)
+            app.quit()
+            return False
+
+        GLib.timeout_add_seconds(90, timeout)
+    status = app.run([sys.argv[0], *_argv_from_options(options)])
+    if options.smoke_test:
+        return 0 if app.smoke_passed else 1
+    return status
 
 
 def _argv_from_options(options: LaunchOptions) -> list[str]:

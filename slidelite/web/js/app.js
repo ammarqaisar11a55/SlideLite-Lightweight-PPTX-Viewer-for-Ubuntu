@@ -307,6 +307,10 @@ host.on('document', async (info) => {
   viewer.load(info);
   thumbs.load(info);
   await goTo(0);
+  host.send('rendered', {
+    slide: state.current + 1,
+    shapes: document.querySelectorAll('#slide-host .slide .sp, #slide-host .slide .grp').length,
+  });
   $('#stage').focus({ preventScroll: true });
   if (info.hasMacros) toast('This presentation contains macros. They are never run.');
   else if (info.issues && info.issues.length) toast('Some damaged content was skipped.');
