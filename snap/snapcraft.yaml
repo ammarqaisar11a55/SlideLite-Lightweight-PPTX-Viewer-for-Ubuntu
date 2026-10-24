@@ -1,0 +1,55 @@
+name: slidelite
+title: SlideLite
+base: core24
+adopt-info: slidelite
+license: MIT
+contact: https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/issues
+issues: https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/issues
+source-code: https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu
+website: https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu
+icon: slidelite/web/icons/slidelite.svg
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  slidelite:
+    command: usr/bin/slidelite
+    common-id: io.github.ammarqaisar.SlideLite
+    desktop: usr/share/applications/io.github.ammarqaisar.SlideLite.desktop
+    extensions: [gnome]
+    # Read-only viewer: files come from the user's home or removable drives.
+    # No network plug — SlideLite never goes online.
+    plugs:
+      - home
+      - removable-media
+    environment:
+      # PyGObject for core24's python3.12 ships in the GNOME runtime.
+      PYTHONPATH: $SNAP/gnome-platform/usr/lib/python3/dist-packages
+      PYTHONDONTWRITEBYTECODE: "1"
+
+parts:
+  slidelite:
+    plugin: nil
+    source: .
+    parse-info:
+      - usr/share/metainfo/io.github.ammarqaisar.SlideLite.metainfo.xml
+    override-build: |
+      set -eu
+      VERSION=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' slidelite/__init__.py)
+      craftctl set version="$VERSION"
+      DEST="$CRAFT_PART_INSTALL"
+      mkdir -p "$DEST/usr/bin" "$DEST/usr/share/slidelite" "$DEST/usr/share/applications" \
+        "$DEST/usr/share/metainfo" "$DEST/usr/share/icons/hicolor/scalable/apps"
+      tar --exclude='__pycache__' --exclude='*.pyc' -cf - slidelite | tar -xf - -C "$DEST/usr/share/slidelite"
+      install -m 0755 snap/local/slidelite "$DEST/usr/bin/slidelite"
+      sed -e '/^TryExec=/d' \
+        -e 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/scalable/apps/io.github.ammarqaisar.SlideLite.svg|' \
+        packaging/io.github.ammarqaisar.SlideLite.desktop \
+        > "$DEST/usr/share/applications/io.github.ammarqaisar.SlideLite.desktop"
+      cp packaging/io.github.ammarqaisar.SlideLite.metainfo.xml "$DEST/usr/share/metainfo/"
+      cp slidelite/web/icons/slidelite.svg \
+        "$DEST/usr/share/icons/hicolor/scalable/apps/io.github.ammarqaisar.SlideLite.svg"

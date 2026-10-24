@@ -12,6 +12,7 @@
 <p align="center">
   <a href="https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/actions/workflows/ci.yml"><img src="https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/releases/latest"><img src="https://img.shields.io/github/v/release/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu?label=release" alt="Latest release"></a>
+  <a href="https://snapcraft.io/slidelite"><img src="https://snapcraft.io/slidelite/badge.svg" alt="Snap Store"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license">
 </p>
 
@@ -85,6 +86,23 @@ macros, and never touches the network.
 | Password-protected files | ❌ Detected and explained |
 
 ## Installation
+
+### Snap Store
+
+```bash
+sudo snap install slidelite
+```
+
+[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/slidelite)
+
+The snap is strictly confined with no network access. It can read presentations in your
+home folder and, once you allow it, on USB drives:
+
+```bash
+sudo snap connect slidelite:removable-media
+```
+
+### Debian package
 
 Download `slidelite_<version>_all.deb` from the
 [latest release](https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/releases/latest), then:
@@ -216,6 +234,12 @@ make deb            # or: packaging/build-deb.sh [output-dir]
 This produces `slidelite_<version>_all.deb` without needing root. Pushing a tag such as
 `v1.0.0` runs the [release workflow](.github/workflows/release.yml), which tests, builds
 and publishes the package as a GitHub Release.
+
+The snap is built from [`snap/snapcraft.yaml`](snap/snapcraft.yaml) with `snapcraft`. It
+uses the shared GNOME 46 runtime snap for GTK and WebKitGTK, so the SlideLite snap itself
+stays small. The [snap workflow](.github/workflows/snap.yml) builds and smoke-tests it on
+amd64 and arm64 for every push, and publishes tagged releases to the Snap Store's
+`stable` channel when the `SNAPCRAFT_STORE_CREDENTIALS` secret is set.
 
 An AppImage is not provided: it would have to bundle GTK and WebKitGTK (hundreds of MB),
 which defeats the purpose of a lightweight viewer that uses the system libraries.

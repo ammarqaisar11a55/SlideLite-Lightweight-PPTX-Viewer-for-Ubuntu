@@ -1,5 +1,7 @@
 """The .deb package: contents, file modes, metadata and a working launcher."""
 
+import os
+import re
 import shutil
 import stat
 import subprocess
@@ -117,3 +119,27 @@ def _data_tar(deb: Path):
             return io.BytesIO(body)
         pos += 60 + size + (size & 1)
     raise AssertionError("no data.tar member")
+
+
+def test_snap_recipe_stays_offline_and_in_sync():
+    recipe = (ROOT / "snap" / "snapcraft.yaml").read_text()
+    assert "confinement: strict" in recipe
+    assert not re.search(r"^\s*- network", recipe, re.M)  # viewer never goes online
+    assert f"common-id: {slidelite.APP_ID}" in recipe
+    # The snap version comes from the package itself, so releases can't drift.
+    assert "slidelite/__init__.py" in recipe
+
+
+def test_snap_launcher_runs_from_snap_layout(tmp_path):
+    share = tmp_path / "usr" / "share" / "slidelite"
+    shutil.copytree(ROOT / "slidelite", share / "slidelite")
+    env = {**os.environ, "SNAP": str(tmp_path), "PYTHONPATH": ""}
+    out = subprocess.run(
+        [sys.executable, str(ROOT / "snap" / "local" / "slidelite"), "--version"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert out.stdout.strip() == f"SlideLite {slidelite.__version__}"
