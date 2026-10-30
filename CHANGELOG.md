@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-10-31
 
 ### Added
 - Opens PowerPoint 97–2003 `.ppt`, `.pps` and `.pot` files with a built-in converter:

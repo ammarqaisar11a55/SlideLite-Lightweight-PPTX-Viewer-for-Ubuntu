@@ -31,9 +31,15 @@
     <binary>slidelite</binary>
     <mediatype>application/vnd.openxmlformats-officedocument.presentationml.presentation</mediatype>
     <mediatype>application/vnd.openxmlformats-officedocument.presentationml.slideshow</mediatype>
+    <mediatype>application/vnd.ms-powerpoint</mediatype>
   </provides>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.1.0" date="2026-10-31">
+      <description>
+        <p>Opens PowerPoint 97–2003 .ppt, .pps and .pot files with a built-in converter, and improves text layout and symbol bullets.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-10-07">
       <description>
         <p>First release.</p>

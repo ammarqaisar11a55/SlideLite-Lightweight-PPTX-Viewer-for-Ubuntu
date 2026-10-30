@@ -108,7 +108,7 @@ Download `slidelite_<version>_all.deb` from the
 [latest release](https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/releases/latest), then:
 
 ```bash
-sudo apt install ./slidelite_1.0.0_all.deb
+sudo apt install ./slidelite_1.1.0_all.deb
 ```
 
 This installs a desktop entry, so SlideLite appears in your applications and in
@@ -245,8 +245,8 @@ and publishes the package as a GitHub Release.
 The snap is built from [`snap/snapcraft.yaml`](snap/snapcraft.yaml) with `snapcraft`. It
 uses the shared GNOME 46 runtime snap for GTK and WebKitGTK, so the SlideLite snap itself
 stays small. The [snap workflow](.github/workflows/snap.yml) builds and smoke-tests it on
-amd64 and arm64 for every push, and publishes tagged releases to the Snap Store's
-`stable` channel when the `SNAPCRAFT_STORE_CREDENTIALS` secret is set.
+amd64 and arm64 for every push. The Snap Store builds `main` itself and releases each
+build to the `edge` channel; a version reaches `stable` when its revisions are promoted.
 
 An AppImage is not provided: it would have to bundle GTK and WebKitGTK (hundreds of MB),
 which defeats the purpose of a lightweight viewer that uses the system libraries.
