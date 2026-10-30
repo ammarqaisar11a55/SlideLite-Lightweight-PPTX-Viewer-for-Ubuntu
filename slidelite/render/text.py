@@ -444,8 +444,10 @@ class TextRenderer:
         first_rpr = next((rpr for kind, rpr, text in runs if kind == "r" and text), None) or (
             runs[0][1] if runs else end_rpr
         )
-        para_size = self.size_pt(first_rpr if has_text else end_rpr)
         sizes = [self.size_pt(rpr) for kind, rpr, text in runs if kind == "r" and text]
+        # The paragraph's own size sets a minimum line height (the CSS strut), but
+        # PowerPoint sizes each line from the runs on it, so use the smallest run.
+        para_size = min(sizes) if sizes else self.size_pt(end_rpr)
 
         css = [f"font-size:{px(para_size)}"]
         algn = pp.get("algn", "l")

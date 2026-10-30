@@ -28,7 +28,7 @@ SUBSTITUTES: dict[str, list[str]] = {
     "consolas": ["Inconsolata", "DejaVu Sans Mono", "Liberation Mono"],
     "lucida console": ["DejaVu Sans Mono", "Liberation Mono"],
     "verdana": ["DejaVu Sans"],
-    "tahoma": ["DejaVu Sans"],
+    "tahoma": ["Liberation Sans", "DejaVu Sans"],  # Tahoma's widths are close to Arial's
     "segoe ui": ["Selawik", "Ubuntu Sans", "Noto Sans", "Open Sans"],
     "segoe ui light": ["Selawik", "Ubuntu Sans", "Noto Sans"],
     "segoe ui semibold": ["Selawik", "Ubuntu Sans", "Noto Sans"],
@@ -92,7 +92,18 @@ _MONO_HINTS = re.compile(r"mono|courier|consolas|console|code", re.IGNORECASE)
 
 _UNSAFE = re.compile(r"[\"'<>&;{}()\\\x00-\x1f]")
 
-SYMBOL_FONTS = {"wingdings", "wingdings 2", "wingdings 3", "symbol", "webdings", "marlett"}
+SYMBOL_FONTS = {
+    "wingdings",
+    "wingdings 2",
+    "wingdings 3",
+    "symbol",
+    "webdings",
+    "marlett",
+    "zapfdingbats",
+    "zapf dingbats",
+    "itc zapf dingbats",
+    "monotype sorts",
+}
 
 
 def family_stack(*families: str | None) -> str:
@@ -298,7 +309,7 @@ WINGDINGS_2 = {
     0x50: "✔",
     0x51: "☒",
     0x52: "☑",
-    0x97: "◆",
+    0x97: "●",
     0x98: "●",
     0x9E: "■",
     0xA2: "▪",
@@ -408,11 +419,22 @@ SYMBOL.update(
         0xF2: "∫",
     }
 )
+# Zapf Dingbats (Monotype Sorts is the same layout) follows the Unicode Dingbats
+# block, except for the shapes that already existed elsewhere in Unicode.
+ZAPF_DINGBATS = {code: chr(0x2700 + code - 0x20) for code in range(0x21, 0x7F)}
+ZAPF_DINGBATS.update(
+    {0x25: "☎", 0x2A: "☛", 0x2B: "☞", 0x48: "★", 0x6C: "●", 0x6E: "■", 0x73: "▲"}
+    | {0x74: "▼", 0x75: "◆", 0x77: "◗"}
+)
 _SYMBOL_TABLES = {
     "wingdings": WINGDINGS,
     "wingdings 2": WINGDINGS_2,
     "wingdings 3": WINGDINGS_3,
     "symbol": SYMBOL,
+    "zapfdingbats": ZAPF_DINGBATS,
+    "zapf dingbats": ZAPF_DINGBATS,
+    "itc zapf dingbats": ZAPF_DINGBATS,
+    "monotype sorts": ZAPF_DINGBATS,
 }
 
 
