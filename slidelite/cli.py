@@ -24,7 +24,7 @@ class LaunchOptions:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="slidelite",
-        description=f"{APP_NAME} - a lightweight PowerPoint (.pptx) viewer.",
+        description=f"{APP_NAME} - a lightweight PowerPoint (.pptx, .ppt) viewer.",
     )
     parser.add_argument("files", nargs="*", metavar="FILE", help="presentation(s) to open")
     mode = parser.add_mutually_exclusive_group()

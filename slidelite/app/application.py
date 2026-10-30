@@ -308,7 +308,7 @@ class SlideLiteApplication(Gtk.Application):
             program_name=APP_NAME,
             version=__version__,
             comments=(
-                "A lightweight, offline PowerPoint (.pptx) viewer for Ubuntu.\n"
+                "A lightweight, offline PowerPoint (.pptx, .ppt) viewer for Ubuntu.\n"
                 "Open → View → Present."
             ),
             license_type=Gtk.License.MIT_X11,

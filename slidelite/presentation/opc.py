@@ -33,7 +33,7 @@ RT_CORE_PROPS = (
     "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"
 )
 
-_OLE_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+OLE_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 
 
 class PackageError(Exception):
@@ -107,7 +107,7 @@ def sniff_container(head: bytes) -> str:
     """'zip', 'ole-encrypted', 'ole-ppt', 'ole' or 'unknown'."""
     if head.startswith(b"PK\x03\x04") or head.startswith(b"PK\x05\x06"):
         return "zip"
-    if head.startswith(_OLE_MAGIC):
+    if head.startswith(OLE_MAGIC):
         if (
             "EncryptedPackage".encode("utf-16-le") in head
             or "EncryptionInfo".encode("utf-16-le") in head
@@ -157,7 +157,7 @@ class Package:
     def _check_container(self) -> None:
         self._fh.seek(0)
         head = self._fh.read(1 << 16)
-        if head.startswith(_OLE_MAGIC) and len(head) >= 0x40:
+        if head.startswith(OLE_MAGIC) and len(head) >= 0x40:
             # Also read the compound file's directory sector, which may sit
             # anywhere in the file (often at the end for encrypted packages).
             shift = int.from_bytes(head[0x1E:0x20], "little")
@@ -175,11 +175,12 @@ class Package:
                 "SlideLite can't open encrypted presentations. Remove the password in "
                 "PowerPoint (File → Info → Protect Presentation) and try again."
             )
-        if kind in ("ole-ppt", "ole"):
+        if kind == "ole-ppt":  # readable .ppt files never get here: see document.load()
             raise LegacyFormatError(
-                "This looks like a PowerPoint 97–2003 (.ppt) file. SlideLite opens .pptx "
-                "presentations only. Save it as .pptx and try again."
+                "This PowerPoint 97–2003 (.ppt) file is damaged and can't be opened."
             )
+        if kind == "ole":
+            raise LegacyFormatError("This file is not a PowerPoint presentation.")
         if not head:
             raise PackageError("The file is empty.")
         if self.path and os.path.basename(self.path).startswith("~$"):

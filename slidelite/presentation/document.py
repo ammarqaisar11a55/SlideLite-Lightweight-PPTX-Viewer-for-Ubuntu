@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import io
 import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import BinaryIO
 
+from slidelite.legacy.convert import LegacyEncryptedError, convert, is_ppt
 from slidelite.presentation import xmlsafe
-from slidelite.presentation.opc import Package, PackageError
+from slidelite.presentation.opc import (
+    OLE_MAGIC,
+    EncryptedPackageError,
+    LegacyFormatError,
+    Package,
+    PackageError,
+)
 from slidelite.presentation.xmlsafe import q
 
 EMU_PER_PT = 12700
@@ -85,8 +93,12 @@ def load(source: str | Path | BinaryIO, lenient: bool = False) -> Presentation:
     With ``lenient=False`` structural damage raises
     :class:`RecoverablePackageError`; call again with ``lenient=True`` to open
     whatever is readable ("Open Anyway").
+
+    PowerPoint 97–2003 files are converted to a .pptx in memory first, so the
+    rest of the application only ever sees one format.
     """
-    package = Package(source)
+    converted = _convert_legacy(source, lenient)
+    package = Package(converted if converted is not None else source)
     try:
         return _load(package, source, lenient)
     except Exception:
@@ -94,10 +106,51 @@ def load(source: str | Path | BinaryIO, lenient: bool = False) -> Presentation:
         raise
 
 
+def _read_compound_file(source: str | Path | BinaryIO) -> bytes | None:
+    """The whole file if it is a compound file; other failures are Package's to report."""
+    try:
+        if isinstance(source, (str, Path)):
+            with open(source, "rb") as fh:
+                if fh.read(len(OLE_MAGIC)) != OLE_MAGIC:
+                    return None
+                fh.seek(0)
+                return fh.read()
+        start = source.tell()
+        data = source.read()
+        source.seek(start)
+        return data if data.startswith(OLE_MAGIC) else None
+    except OSError:
+        return None
+
+
+def _convert_legacy(source: str | Path | BinaryIO, lenient: bool) -> BinaryIO | None:
+    data = _read_compound_file(source)
+    if data is None or not is_ppt(data):
+        return None
+    try:
+        pptx, issues = convert(data)
+    except LegacyEncryptedError:
+        raise EncryptedPackageError(
+            "SlideLite can't open encrypted presentations. Remove the password in "
+            "PowerPoint (File → Info → Protect Presentation) and try again."
+        ) from None
+    except Exception as exc:  # noqa: BLE001 - the file is untrusted: any failure means damage
+        raise LegacyFormatError(
+            "This PowerPoint 97–2003 (.ppt) file is damaged, or was saved by a version older "
+            "than PowerPoint 97.",
+            str(exc),
+        ) from None
+    if issues and not lenient:
+        raise RecoverablePackageError(issues)
+    return io.BytesIO(pptx)
+
+
 def _load(package: Package, source, lenient: bool) -> Presentation:
     main = package.main_part()
     issues: list[str] = []
     kind = MAIN_CONTENT_TYPES.get(package.content_type(main), "presentation")
+    if isinstance(source, (str, Path)) and str(source).lower().endswith(".pps"):
+        kind = "slideshow"  # a binary file's only "show" marker is its extension
     try:
         root = package.xml(main)
     except PackageError:

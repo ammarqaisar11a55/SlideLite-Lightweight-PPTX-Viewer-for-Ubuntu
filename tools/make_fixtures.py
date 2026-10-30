@@ -16,6 +16,7 @@ import zipfile
 import zlib
 from pathlib import Path
 
+import ppt_builder
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
@@ -761,6 +762,7 @@ def broken() -> None:
 
     (OUT / "encrypted.pptx").write_bytes(ole("EncryptedPackage"))
     (OUT / "legacy.ppt").write_bytes(ole("PowerPoint Document"))
+    (OUT / "binary-deck.ppt").write_bytes(ppt_builder.sample_deck())
     shutil.copy(good, OUT / "renamed-copy.ppsx")
 
 

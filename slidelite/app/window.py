@@ -8,6 +8,8 @@ from slidelite import APP_ID, APP_NAME
 from slidelite.app.webview import SlideWebView
 
 PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+PPT_MIME = "application/vnd.ms-powerpoint"
+PATTERNS = ("pptx", "ppsx", "pptm", "potx", "ppt", "pps", "pot")
 
 
 class ViewerWindow(Gtk.ApplicationWindow):
@@ -117,12 +119,14 @@ class ViewerWindow(Gtk.ApplicationWindow):
         dialog = Gtk.FileChooserNative.new(
             "Open Presentation", self, Gtk.FileChooserAction.OPEN, "_Open", "_Cancel"
         )
-        pptx = Gtk.FileFilter()
-        pptx.set_name("PowerPoint presentations")
-        pptx.add_mime_type(PPTX_MIME)
-        pptx.add_pattern("*.pptx")
-        pptx.add_pattern("*.PPTX")
-        dialog.add_filter(pptx)
+        presentations = Gtk.FileFilter()
+        presentations.set_name("PowerPoint presentations")
+        presentations.add_mime_type(PPTX_MIME)
+        presentations.add_mime_type(PPT_MIME)
+        for extension in PATTERNS:
+            presentations.add_pattern(f"*.{extension}")
+            presentations.add_pattern(f"*.{extension.upper()}")
+        dialog.add_filter(presentations)
         everything = Gtk.FileFilter()
         everything.set_name("All files")
         everything.add_pattern("*")
