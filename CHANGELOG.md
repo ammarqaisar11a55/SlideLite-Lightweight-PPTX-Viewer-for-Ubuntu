@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Opens PowerPoint 97–2003 `.ppt`, `.pps` and `.pot` files with a built-in converter:
+  no LibreOffice or other software needed, and nothing is written to disk. Text,
+  masters, shapes, pictures, gradients, numbered lists, transitions and click animations
+  all carry over.
+- Snap package, built and smoke-tested by CI on amd64 and arm64.
+
+### Fixed
+- A large first character (often a space) no longer stretches every line of a paragraph.
+- Monotype Sorts and Zapf Dingbats bullets show the right symbols instead of letters.
+- Tahoma text no longer runs long: it now falls back to a font with matching widths.
+
 ## 1.0.0 — 2026-10-07
 
 First release.

@@ -1,6 +1,6 @@
 # SlideLite Architecture
 
-SlideLite is a **viewer only**. It opens `.pptx` files read-only, renders them as
+SlideLite is a **viewer only**. It opens `.pptx` and `.ppt` files read-only, renders them as
 faithfully as practical, and presents them. It never writes to the source file and
 has no editing code paths.
 
@@ -82,12 +82,17 @@ approximations.
 
 ## 3. Security model
 
-PPTX files are untrusted input.
+Presentation files are untrusted input.
 
 * **Zip handling** (`opc.py`): it enforces limits on entry count, total
   uncompressed size and compression ratio (zip bombs). Part names are
   normalised and anything escaping the package root is rejected (path
   traversal). Nothing is extracted to disk.
+* **Binary `.ppt` files** (`legacy/`): sector chains are bounded and checked for
+  loops, sizes are validated against the file, record trees have a depth limit
+  and picture decompression has a size cap. Damage inside a shape or slide skips
+  that item rather than failing the file. The result is then opened like any
+  other package, so every check below applies to it too.
 * **XML** (`xmlsafe.py`): documents containing `<!DOCTYPE`/`<!ENTITY` are
   refused before parsing, which rules out XXE and entity expansion. Size
   limits apply per part.
@@ -108,6 +113,22 @@ PPTX files are untrusted input.
   content filter under `$XDG_CACHE_HOME/slidelite/`.
 * **Privacy**: no telemetry, no crash upload, no network access at all.
 
+### PowerPoint 97–2003 files
+
+`document.load()` recognises a binary presentation by its content, not its
+extension, and `legacy/` converts it to a `.pptx` in memory. Everything after that
+point sees one format, so `.ppt` files get the renderer, thumbnails and slide show
+without any special cases. The alternatives were weaker: LibreOffice is a large
+dependency for a lightweight viewer and a strictly confined snap can't run it,
+while rendering the binary format directly would mean a second renderer to maintain.
+
+Binary PowerPoint resolves text styles and colours through the master at display
+time. The converter flattens those values onto each run and shape, and writes one
+master part per (master, colour scheme) pair, because the same master artwork is
+recoloured by each slide's scheme. Shape ids are kept, since animation timelines
+refer to them. PowerPoint 2002+ timelines map node for node onto `p:timing`; older
+per-shape build records become an equivalent simple timeline.
+
 ## 4. Module map
 
 ```
@@ -115,6 +136,18 @@ slidelite/
 ├── cli.py                 command line (slidelite [--fullscreen|--presentation] FILE)
 ├── app/                   GTK shell: application, window, hardened WebKit view
 ├── server/                router + document session (HTTP-free, in-memory)
+├── legacy/                PowerPoint 97–2003: binary file → in-memory .pptx
+│   ├── cfb.py             compound file (OLE2) reader
+│   ├── records.py         record tree of the document stream
+│   ├── persist.py         current user → user edits → persist directory
+│   ├── deck.py            slides, masters, schemes, fonts, links
+│   ├── text.py            strings, style runs, master text styles, numbering
+│   ├── officeart.py       shape tree and property tables
+│   ├── pictures.py        BLIPs → image files
+│   ├── geometry.py        shape types → presets, adjust values
+│   ├── timeline.py        animations → p:timing
+│   ├── pptx.py            writes the OPC package, flattening inheritance
+│   └── convert.py         entry point used by presentation/document.py
 ├── presentation/          OOXML engine
 │   ├── opc.py             zip package, content types, relationships
 │   ├── xmlsafe.py         hardened XML parsing, namespaces
@@ -169,12 +202,16 @@ slidelite/
 * **GUI tests** drive the real WebKit view (navigation, zoom, thumbnails,
   slide show, transitions, animations, preferences, accessibility) through
   `tests/harness.py`.
+* **Binary `.ppt` tests** build genuine files byte by byte with
+  `tools/ppt_builder.py`, because real decks can't be committed, and fuzz them
+  at the container and record level.
 * **Stress tests**: a 300-slide deck and large images.
 * **Packaging tests**: build the `.deb` and check contents, modes and the
   installed launcher.
 * During development every slide of 253 real-world decks (6,201 slides) was
   rendered with no failures; those decks are private and not part of the
-  repository.
+  repository. The same was done for 13 real `.ppt` decks (354 slides), plus 400
+  damaged copies of them.
 
 ## 7. Known trade-offs
 
@@ -185,6 +222,9 @@ slidelite/
 * 3D effects (bevels, extrusion), artistic image effects and some
   rarely-used transitions are approximated or ignored. See the README
   limitations section.
+* `.ppt` conversion is a best effort at the features of a 25-year-old format: OLE
+  objects show their stored preview, Mac PICT pictures are skipped and WordArt
+  keeps its words and colour but not its warp.
 * Audio and video are not played; media shapes show their poster frame.
   WebKitGTK's GStreamer pipeline does not read media from custom URI
   schemes, and playback was deprioritised for the first release.

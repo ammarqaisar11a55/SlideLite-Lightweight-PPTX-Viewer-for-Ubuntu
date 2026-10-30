@@ -82,7 +82,7 @@ macros, and never touches the network.
 | `.ppsx` PowerPoint show | ✅ Opens directly in the slide show |
 | `.pptm` macro-enabled presentation | ✅ Displayed; **macros are never run** |
 | `.potx` template | ✅ Displayed |
-| `.ppt` PowerPoint 97–2003 | ❌ Detected and explained (save as .pptx) |
+| `.ppt`, `.pps`, `.pot` PowerPoint 97–2003 | ✅ Converted in memory; the file is never changed |
 | Password-protected files | ❌ Detected and explained |
 
 ## Installation
@@ -177,7 +177,10 @@ limitations:
 - EMF+ only metafiles (no GDI fallback records) may appear empty. TIFF images need the
   GdkPixbuf TIFF loader.
 - Speaker notes, comments and presenter view are not shown.
-- Legacy `.ppt` and password-protected files cannot be opened.
+- Password-protected files cannot be opened.
+- **`.ppt` files:** objects embedded from other programs (Excel charts, Equation Editor)
+  show the preview picture stored with them. Mac PICT pictures are skipped, picture
+  bullets become plain bullets, and PowerPoint 95 and older files are not supported.
 
 ## Privacy and security
 
@@ -203,6 +206,10 @@ GTK window ──► hardened WebKit view (viewer UI, thumbnails, slide show, an
                  ▲ slidelite:// (in memory, no network)
 Python host ──► router ──► document session ──► OOXML engine ──► HTML/SVG renderer
 ```
+
+PowerPoint 97–2003 `.ppt` files are converted to a `.pptx` in memory by a built-in,
+pure-Python converter, so they get the same renderer, thumbnails and slide show. Nothing
+is written to disk and no other software, such as LibreOffice, is needed.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the technology evaluation, module map,
 security model and performance strategy.

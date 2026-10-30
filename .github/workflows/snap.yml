@@ -54,6 +54,7 @@ jobs:
           slidelite --version
           # No dbus-run-session: snap run needs the runner's real systemd user scope.
           xvfb-run -a slidelite --smoke-test "$PWD/tests/fixtures/shapes.pptx"
+          xvfb-run -a slidelite --smoke-test "$PWD/tests/fixtures/binary-deck.ppt"
 
       - uses: actions/upload-artifact@v4
         with:
