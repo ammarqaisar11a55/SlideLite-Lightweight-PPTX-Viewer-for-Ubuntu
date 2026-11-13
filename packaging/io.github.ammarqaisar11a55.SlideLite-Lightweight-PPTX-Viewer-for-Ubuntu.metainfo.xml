@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>SlideLite</name>
+  <summary>Lightweight, offline PowerPoint viewer</summary>
+  <developer id="io.github.ammarqaisar11a55">
+    <name>Muhammad Ammar Qaisar</name>
+  </developer>
+  <description>
+    <p>
+      SlideLite opens PowerPoint (.pptx and .ppt) presentations and presents them without an office
+      suite. It renders slides with themes, masters and layouts, text, shapes, pictures,
+      tables, charts and SmartArt, and plays slide transitions and build animations in a
+      fullscreen slide show.
+    </p>
+    <p>
+      SlideLite is a viewer only: presentations are never modified, macros never run, and it
+      works completely offline with no accounts or telemetry.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.desktop</launchable>
+  <url type="homepage">https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu</url>
+  <url type="bugtracker">https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/issues</url>
+  <url type="vcs-browser">https://github.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu</url>
+  <branding>
+    <color type="primary" scheme_preference="light">#a9b3fa</color>
+    <color type="primary" scheme_preference="dark">#2a3596</color>
+  </branding>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+  <supports>
+    <control>touch</control>
+  </supports>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Slide viewer with the thumbnail sidebar</caption>
+      <image>https://raw.githubusercontent.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/v1.1.1/docs/screenshots/viewer-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Viewer in the dark theme</caption>
+      <image>https://raw.githubusercontent.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/v1.1.1/docs/screenshots/viewer-dark.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Tables with built-in PowerPoint styles</caption>
+      <image>https://raw.githubusercontent.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/v1.1.1/docs/screenshots/table.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>SmartArt process diagram</caption>
+      <image>https://raw.githubusercontent.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/v1.1.1/docs/screenshots/process.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Fullscreen slide show</caption>
+      <image>https://raw.githubusercontent.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/v1.1.1/docs/screenshots/slideshow.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Welcome screen with recent presentations</caption>
+      <image>https://raw.githubusercontent.com/ammarqaisar11a55/SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu/v1.1.1/docs/screenshots/welcome.png</image>
+    </screenshot>
+  </screenshots>
+  <categories>
+    <category>Office</category>
+    <category>Viewer</category>
+  </categories>
+  <provides>
+    <binary>slidelite</binary>
+    <mediatype>application/vnd.openxmlformats-officedocument.presentationml.presentation</mediatype>
+    <mediatype>application/vnd.openxmlformats-officedocument.presentationml.slideshow</mediatype>
+    <mediatype>application/vnd.ms-powerpoint</mediatype>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.1.1" date="2026-11-13">
+      <description>
+        <p>Available on Flathub. The application ID is now io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.</p>
+      </description>
+    </release>
+    <release version="1.1.0" date="2026-10-31">
+      <description>
+        <p>Opens PowerPoint 97–2003 .ppt, .pps and .pot files with a built-in converter, and improves text layout and symbol bullets.</p>
+      </description>
+    </release>
+    <release version="1.0.0" date="2026-10-07">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

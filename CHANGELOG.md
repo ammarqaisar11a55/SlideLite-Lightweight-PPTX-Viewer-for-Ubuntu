@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1 — 2026-11-13
+
+### Changed
+- Flatpak package, published on Flathub.
+- The application ID is now `io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu` to match the GitHub
+  repository that hosts the project. The desktop and metainfo files are renamed to match;
+  settings and recent files are unaffected.
+
 ## 1.1.0 — 2026-10-31
 
 ### Added

@@ -18,8 +18,8 @@ platforms:
 apps:
   slidelite:
     command: usr/bin/slidelite
-    common-id: io.github.ammarqaisar.SlideLite
-    desktop: usr/share/applications/io.github.ammarqaisar.SlideLite.desktop
+    common-id: io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu
+    desktop: usr/share/applications/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.desktop
     extensions: [gnome]
     # Read-only viewer: files come from the user's home or removable drives.
     # No network plug — SlideLite never goes online.
@@ -36,7 +36,7 @@ parts:
     plugin: nil
     source: .
     parse-info:
-      - usr/share/metainfo/io.github.ammarqaisar.SlideLite.metainfo.xml
+      - usr/share/metainfo/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.metainfo.xml
     override-build: |
       set -eu
       VERSION=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' slidelite/__init__.py)
@@ -47,9 +47,9 @@ parts:
       tar --exclude='__pycache__' --exclude='*.pyc' -cf - slidelite | tar -xf - -C "$DEST/usr/share/slidelite"
       install -m 0755 snap/local/slidelite "$DEST/usr/bin/slidelite"
       sed -e '/^TryExec=/d' \
-        -e 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/scalable/apps/io.github.ammarqaisar.SlideLite.svg|' \
-        packaging/io.github.ammarqaisar.SlideLite.desktop \
-        > "$DEST/usr/share/applications/io.github.ammarqaisar.SlideLite.desktop"
-      cp packaging/io.github.ammarqaisar.SlideLite.metainfo.xml "$DEST/usr/share/metainfo/"
+        -e 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/scalable/apps/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.svg|' \
+        packaging/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.desktop \
+        > "$DEST/usr/share/applications/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.desktop"
+      cp packaging/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.metainfo.xml "$DEST/usr/share/metainfo/"
       cp slidelite/web/icons/slidelite.svg \
-        "$DEST/usr/share/icons/hicolor/scalable/apps/io.github.ammarqaisar.SlideLite.svg"
+        "$DEST/usr/share/icons/hicolor/scalable/apps/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.svg"

@@ -14,7 +14,7 @@ import pytest
 import slidelite
 
 ROOT = Path(__file__).resolve().parent.parent
-APP_ID = "io.github.ammarqaisar.SlideLite"
+APP_ID = "io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu"
 
 pytestmark = [
     pytest.mark.slow,

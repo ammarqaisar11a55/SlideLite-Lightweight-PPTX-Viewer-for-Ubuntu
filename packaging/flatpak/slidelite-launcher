@@ -1,0 +1,10 @@
+#!/usr/bin/python3
+"""SlideLite launcher inside the Flatpak (the package lives in /app/share/slidelite)."""
+
+import sys
+
+sys.path.insert(0, "/app/share/slidelite")
+
+from slidelite.cli import main  # noqa: E402
+
+sys.exit(main())

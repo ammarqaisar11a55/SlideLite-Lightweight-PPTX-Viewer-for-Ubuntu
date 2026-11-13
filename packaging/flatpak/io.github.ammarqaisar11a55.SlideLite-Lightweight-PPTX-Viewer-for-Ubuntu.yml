@@ -1,0 +1,42 @@
+# Flatpak manifest for a local build from this checkout:
+#
+#   flatpak run org.flatpak.Builder --user --install --force-clean \
+#     build-dir packaging/flatpak/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.yml
+#
+# The Flathub copy (github.com/flathub/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu) is
+# the same file with the source pinned to a release tag.
+id: io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu
+runtime: org.gnome.Platform
+runtime-version: '51'
+sdk: org.gnome.Sdk
+command: slidelite
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # No filesystem or network access: presentations are opened through the
+  # file chooser portal or handed over by the file manager, and SlideLite
+  # never goes online.
+
+modules:
+  - name: slidelite
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/share/slidelite
+      - tar --exclude='__pycache__' --exclude='*.pyc' -cf - slidelite | tar -xf - -C /app/share/slidelite
+      - python3 -m compileall -q /app/share/slidelite
+      - install -Dm0755 packaging/flatpak/slidelite-launcher /app/bin/slidelite
+      - install -Dm0644 packaging/${FLATPAK_ID}.desktop -t /app/share/applications
+      - install -Dm0644 packaging/${FLATPAK_ID}.metainfo.xml -t /app/share/metainfo
+      - install -Dm0644 slidelite/web/icons/slidelite.svg /app/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
+      - install -Dm0644 packaging/slidelite.1 -t /app/share/man/man1
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - .git
+          - .venv
+          - build-dir
+          - .flatpak-builder
+          - repo

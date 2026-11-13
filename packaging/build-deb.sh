@@ -10,7 +10,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${1:-$ROOT}"
 VERSION="$(cd "$ROOT" && python3 -c 'import slidelite; print(slidelite.__version__)')"
-APP_ID="io.github.ammarqaisar.SlideLite"
+APP_ID="io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu"
 PKG="slidelite_${VERSION}_all"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT

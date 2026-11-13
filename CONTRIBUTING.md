@@ -81,7 +81,7 @@ Before committing, run `make lint test test-js`.
 ## Releasing
 
 1. Bump `__version__` in `slidelite/__init__.py` and add a `<release>` entry to
-   `packaging/io.github.ammarqaisar.SlideLite.metainfo.xml` and `CHANGELOG.md`.
+   `packaging/io.github.ammarqaisar11a55.SlideLite-Lightweight-PPTX-Viewer-for-Ubuntu.metainfo.xml` and `CHANGELOG.md`.
 2. Commit, then tag and push: `git tag v1.2.3 && git push origin v1.2.3`.
 3. The release workflow runs the tests, builds the `.deb` and publishes the GitHub
    Release.
